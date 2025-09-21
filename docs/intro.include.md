@@ -1,0 +1,1 @@
+Extends [Verify](https://github.com/VerifyTests/Verify) to allow verification of Excel documents via [ClosedXML](https://github.com/ClosedXML/ClosedXML).
