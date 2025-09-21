@@ -1,9 +1,7 @@
 # <img src="/src/icon.png" height="30px"> DeterministicIoPackaging
 
-[![Build status](https://ci.appveyor.com/api/projects/status/xyn3eaf6i5tc9l5e?svg=true)](https://ci.appveyor.com/project/SimonCropp/verify-closedxml)
+[![Build status](https://ci.appveyor.com/api/projects/status/yw2qps5cxvxh850v?svg=true)](https://ci.appveyor.com/project/SimonCropp/deterministiciopackaging)
 [![NuGet Status](https://img.shields.io/nuget/v/DeterministicIoPackaging.svg)](https://www.nuget.org/packages/DeterministicIoPackaging/)
-
-Converts Excel documents (xlsx) to csv for verification.
 
 **See [Milestones](../../milestones?state=closed) for release notes.**
 
@@ -14,4 +12,10 @@ Converts Excel documents (xlsx) to csv for verification.
 
 
 ## Usage
+
+
+## Icon
+
+[Pi](https://thenounproject.com/icon/pi-2131020/) designed by [Zaidan](https://thenounproject.com/creator/mzaidanfiros/) from [The Noun Project](https://thenounproject.com).
+
 
