@@ -1,0 +1,19 @@
+﻿<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>SimpleInfoName</name>
+    </assembly>
+    <members>
+        <member name="P:System.Diagnostics.CodeAnalysis.NotNullWhenAttribute.ReturnValue">
+            <summary>
+              Gets the return value condition.
+              If the method returns this value, the associated parameter will not be <see langword="null"/>.
+            </summary>
+        </member>
+        <member name="M:System.Diagnostics.CodeAnalysis.NotNullWhenAttribute.#ctor(System.Boolean)">
+            <summary>
+              Initializes the attribute with the specified return value condition.
+            </summary>
+        </member>
+    </members>
+</doc>
