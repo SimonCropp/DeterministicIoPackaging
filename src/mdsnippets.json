@@ -3,5 +3,6 @@
   "TocExcludes": [ "NuGet package", "Release Notes", "Icon" ],
   "MaxWidth": 100,
   "ValidateContent": true,
-  "Convention": "InPlaceOverwrite"
+  "Convention": "InPlaceOverwrite",
+  "ExcludeMarkdownDirectories": [ "Tests" ]
 }

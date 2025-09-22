@@ -44,9 +44,8 @@ public static class DeterministicPackage
         using var targetStream = targetEntry.Open();
         if (IsRels(sourceEntry))
         {
-            var xml = XDocument.Load(sourceStream);
-            PatchRelsXml(xml);
-            xml.Save(targetStream);
+            var xml = PatchRelationships(sourceStream);
+            xml.Save(targetStream, SaveOptions.None);
         }
         else
         {
@@ -66,8 +65,8 @@ public static class DeterministicPackage
         using var targetStream = await targetEntry.OpenAsync(cancel);
         if (IsRels(sourceEntry))
         {
-            var xml = XDocument.Load(sourceStream);
-            PatchRelsXml(xml);
+            var xml = PatchRelationships(sourceStream);
+
             await xml.SaveAsync(targetStream, SaveOptions.None, cancel);
         }
         else
@@ -76,16 +75,18 @@ public static class DeterministicPackage
         }
     }
 
-    static Entry CreateEntry(Entry source, Archive target)
+    static XDocument PatchRelationships(Stream sourceStream)
     {
-        var entry = target.CreateEntry(source.FullName, CompressionLevel.Fastest);
-        entry.LastWriteTime = stableDateOffset;
-        return entry;
-    }
+        var xml = XDocument.Load(sourceStream);
+        var name = XName.Get("Relationship", "http://schemas.openxmlformats.org/package/2006/relationships");
+        var relationships = xml.Descendants(name).ToList();
 
-    static void PatchRelsXml(XDocument xml)
-    {
-        var relationships = xml.Descendants(XName.Get("Relationship", "http://schemas.openxmlformats.org/package/2006/relationships")).ToList();
+        for (var index = 0; index < relationships.Count; index++)
+        {
+            var relationship = relationships[index];
+            relationship.Attribute("Id")!.SetValue($"DeterministicId{index + 1}");
+        }
+
         var psmdcp = relationships
             .Where(rel =>
             {
@@ -96,9 +97,14 @@ public static class DeterministicPackage
             .SingleOrDefault();
         psmdcp?.Remove();
 
-        var workbook = relationships
-            .Single(_ => _.Attribute("Target")!.Value.EndsWith("xl/workbook.xml"));
-        workbook.Attribute("Id")!.SetValue("VerifyClosedXml");
+        return xml;
+    }
+
+    static Entry CreateEntry(Entry source, Archive target)
+    {
+        var entry = target.CreateEntry(source.FullName, CompressionLevel.Fastest);
+        entry.LastWriteTime = stableDateOffset;
+        return entry;
     }
 
     static bool IsPsmdcp(Entry entry) =>

@@ -5,7 +5,7 @@
     <Version>0.1.0</Version>
     <LangVersion>preview</LangVersion>
     <AssemblyVersion>1.0.0</AssemblyVersion>
-    <Description></Description>
+    <Description>Modify System.IO.Packaging (https://learn.microsoft.com/en-us/dotnet/api/system.io.packaging) files to ensure they are deterministic. Helpful for testing, build reproducibility, security verification, and ensuring package integrity across different build environments.</Description>
     <ResolveAssemblyReferencesSilent>true</ResolveAssemblyReferencesSilent>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
