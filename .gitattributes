@@ -2,6 +2,8 @@
 *.snk binary
 *.png binary
 *.zip binary
+*.xlsx binary
+*.nupkg binary
 
 *.verified.json text eol=lf working-tree-encoding=UTF-8
 *.verified.md text eol=lf working-tree-encoding=UTF-8
