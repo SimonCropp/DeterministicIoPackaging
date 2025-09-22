@@ -69,7 +69,7 @@ public static class DeterministicPackage
         if (IsRelationships(sourceEntry))
         {
             var xml = PatchRelationships(sourceStream);
-            xml.Save(targetStream, SaveOptions.None);
+            xml.Save(targetStream, SaveOptions.DisableFormatting);
         }
         else
         {
@@ -91,7 +91,7 @@ public static class DeterministicPackage
         {
             var xml = PatchRelationships(sourceStream);
 
-            await xml.SaveAsync(targetStream, SaveOptions.None, cancel);
+            await xml.SaveAsync(targetStream, SaveOptions.DisableFormatting, cancel);
         }
         else
         {
