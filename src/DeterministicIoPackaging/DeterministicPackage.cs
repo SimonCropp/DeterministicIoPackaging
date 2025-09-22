@@ -46,7 +46,15 @@ public static class DeterministicPackage
 
     static Archive CreateArchive(Stream target) => new(target, ZipArchiveMode.Create, leaveOpen: true);
 
-    static Archive ReadArchive(Stream source) => new(source, ZipArchiveMode.Read, leaveOpen: false);
+    static Archive ReadArchive(Stream source)
+    {
+        if (source is MemoryStream memoryStream)
+        {
+            memoryStream.Position = 0;
+        }
+
+        return new(source, ZipArchiveMode.Read, leaveOpen: true);
+    }
 
     static void DuplicateEntry(Entry sourceEntry, Archive targetArchive)
     {
@@ -58,7 +66,7 @@ public static class DeterministicPackage
         using var sourceStream = sourceEntry.Open();
         var targetEntry = CreateEntry(sourceEntry, targetArchive);
         using var targetStream = targetEntry.Open();
-        if (IsRels(sourceEntry))
+        if (IsRelationships(sourceEntry))
         {
             var xml = PatchRelationships(sourceStream);
             xml.Save(targetStream, SaveOptions.None);
@@ -79,7 +87,7 @@ public static class DeterministicPackage
         using var sourceStream = await sourceEntry.OpenAsync(cancel);
         var targetEntry = CreateEntry(sourceEntry, targetArchive);
         using var targetStream = await targetEntry.OpenAsync(cancel);
-        if (IsRels(sourceEntry))
+        if (IsRelationships(sourceEntry))
         {
             var xml = PatchRelationships(sourceStream);
 
@@ -91,11 +99,12 @@ public static class DeterministicPackage
         }
     }
 
+    static XName relationshipName = XName.Get("Relationship", "http://schemas.openxmlformats.org/package/2006/relationships");
+
     static XDocument PatchRelationships(Stream sourceStream)
     {
         var xml = XDocument.Load(sourceStream);
-        var name = XName.Get("Relationship", "http://schemas.openxmlformats.org/package/2006/relationships");
-        var relationships = xml.Descendants(name).ToList();
+        var relationships = xml.Descendants(relationshipName).ToList();
 
         for (var index = 0; index < relationships.Count; index++)
         {
@@ -127,6 +136,6 @@ public static class DeterministicPackage
         entry.FullName.StartsWith("package/services/metadata/core-properties/") &&
         entry.Name.EndsWith("psmdcp");
 
-    static bool IsRels(Entry _) =>
+    static bool IsRelationships(Entry _) =>
         _.FullName == "_rels/.rels";
 }
