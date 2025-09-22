@@ -3,7 +3,10 @@
 *.png binary
 *.zip binary
 *.xlsx binary
+*.sha256 binary
+*.dll binary
 *.nupkg binary
+*.p7s binary
 
 *.verified.json text eol=lf working-tree-encoding=UTF-8
 *.verified.md text eol=lf working-tree-encoding=UTF-8
