@@ -8,6 +8,22 @@ public static class DeterministicPackage
     public static DateTime StableDate { get; } = new(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     public static DateTimeOffset StableDateOffset { get; } = new(StableDate);
 
+    public static MemoryStream Convert(Stream source)
+    {
+        var target = new MemoryStream();
+        Convert(source, target);
+        target.Position = 0;
+        return target;
+    }
+
+    public static async Task<MemoryStream> ConvertAsync(Stream source)
+    {
+        var target = new MemoryStream();
+        await ConvertAsync(source, target);
+        target.Position = 0;
+        return target;
+    }
+
     public static void Convert(Stream source, Stream target)
     {
         using var sourceArchive = ReadArchive(source);
