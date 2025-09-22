@@ -7,7 +7,7 @@ Generates names for reflection infos. Adds a `SimpleName()` extension method to 
  * PropertyInfo
  * FieldInfo
  * MethodInfo
- * ConstructorInfo<!-- endInclude -->
+ * ConstructorInfo
 
 **See [Milestones](https://github.com/VerifyTests/SimpleInfoName/milestones?state=closed) for release notes.**
 

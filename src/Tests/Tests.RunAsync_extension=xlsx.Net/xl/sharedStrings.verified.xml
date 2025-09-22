@@ -1,1 +1,2 @@
-﻿<?xml version="1.0" encoding="utf-8"?><x:sst xmlns:x="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><x:si><x:t>ID</x:t></x:si><x:si><x:t>Name</x:t></x:si><x:si><x:t>John Doe</x:t></x:si><x:si><x:t>Jane Smith</x:t></x:si></x:sst>
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="4" uniqueCount="4"><si><t>ID</t></si><si><t>Name</t></si><si><t>John Doe</t></si><si><t>Jane Smith</t></si></sst>
