@@ -5,8 +5,8 @@ namespace DeterministicIoPackaging;
 
 public static class DeterministicPackage
 {
-    static DateTime stableDate = new(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-    static DateTimeOffset stableDateOffset = new(stableDate);
+    public static DateTime StableDate { get; } = new(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+    public static DateTimeOffset StableDateOffset { get; } = new(StableDate);
 
     public static void Convert(Stream source, Stream target)
     {
@@ -103,7 +103,7 @@ public static class DeterministicPackage
     static Entry CreateEntry(Entry source, Archive target)
     {
         var entry = target.CreateEntry(source.FullName, CompressionLevel.Fastest);
-        entry.LastWriteTime = stableDateOffset;
+        entry.LastWriteTime = StableDateOffset;
         return entry;
     }
 
