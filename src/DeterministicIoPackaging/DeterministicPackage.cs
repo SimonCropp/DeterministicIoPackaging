@@ -119,9 +119,14 @@ public static class DeterministicPackage
 
     static XName relationshipName = XName.Get("Relationship", "http://schemas.openxmlformats.org/package/2006/relationships");
 
-    static XDocument PatchRelationships(Stream sourceStream)
+    internal static XDocument PatchRelationships(Stream sourceStream)
     {
         var xml = XDocument.Load(sourceStream);
+        return PatchRelationships(xml);
+    }
+
+    internal static XDocument PatchRelationships(XDocument xml)
+    {
         var relationships = xml.Descendants(relationshipName).ToList();
 
         for (var index = 0; index < relationships.Count; index++)
