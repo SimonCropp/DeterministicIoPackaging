@@ -127,7 +127,13 @@ public static class DeterministicPackage
 
     internal static XDocument PatchRelationships(XDocument xml)
     {
-        var relationships = xml.Descendants(relationshipName).ToList();
+        var root = xml.Root!;
+        var relationships = root.Elements(relationshipName)
+            .Where(_ => !IsPsmdcpElement(_))
+            .OrderBy(_ => _.Attribute("Type")!.Value)
+            .ToList();
+
+        root.Elements(relationshipName).Remove();
 
         for (var index = 0; index < relationships.Count; index++)
         {
@@ -135,17 +141,14 @@ public static class DeterministicPackage
             relationship.Attribute("Id")!.SetValue($"DeterministicId{index + 1}");
         }
 
-        var psmdcp = relationships
-            .Where(rel =>
-            {
-                var target = rel.Attribute("Target");
-                return target != null &&
-                       target.Value.EndsWith(".psmdcp");
-            })
-            .SingleOrDefault();
-        psmdcp?.Remove();
-
+        root.Add(relationships);
         return xml;
+
+        static bool IsPsmdcpElement(XElement rel)
+        {
+            var target = rel.Attribute("Target")!;
+            return target.Value.EndsWith(".psmdcp");
+        }
     }
 
     static XNamespace mc = "http://schemas.openxmlformats.org/markup-compatibility/2006";
