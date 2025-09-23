@@ -1,8 +1,15 @@
-﻿using DeterministicIoPackaging;
-
-[TestFixture]
+﻿[TestFixture]
 public class Tests
 {
+    [Test]
+    public Task AbsPath()
+    {
+        var packagePath = Path.Combine(directory, "sample.WithAbsPath.xlsx");
+        var stream = Convert(packagePath);
+
+        return VerifyZip(stream);
+    }
+
     [Test]
     public Task Run([Values] Extension extension)
     {
@@ -46,6 +53,11 @@ public class Tests
     static MemoryStream Convert(Extension extension)
     {
         var packagePath = Path.Combine(directory, $"sample.{extension}");
+        return Convert(packagePath);
+    }
+
+    static MemoryStream Convert(string packagePath)
+    {
         var targetStream = new MemoryStream();
 
         #region Convert

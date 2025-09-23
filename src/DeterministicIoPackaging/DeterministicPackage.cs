@@ -66,15 +66,22 @@ public static class DeterministicPackage
         using var sourceStream = sourceEntry.Open();
         var targetEntry = CreateEntry(sourceEntry, targetArchive);
         using var targetStream = targetEntry.Open();
+
         if (IsRelationships(sourceEntry))
         {
             var xml = PatchRelationships(sourceStream);
-            xml.Save(targetStream, SaveOptions.DisableFormatting);
+            SaveXml(xml, targetStream);
+            return;
         }
-        else
+
+        if (IsWorkbookXml(sourceEntry))
         {
-            sourceStream.CopyTo(targetStream);
+            var xml = PatchWorkbook(sourceStream);
+            SaveXml(xml, targetStream);
+            return;
         }
+
+        sourceStream.CopyTo(targetStream);
     }
 
     static async Task DuplicateEntryAsync(Entry sourceEntry, Archive targetArchive, Cancel cancel)
@@ -90,14 +97,25 @@ public static class DeterministicPackage
         if (IsRelationships(sourceEntry))
         {
             var xml = PatchRelationships(sourceStream);
+            await SaveXml(xml, targetStream, cancel);
+            return;
+        }
 
-            await xml.SaveAsync(targetStream, SaveOptions.DisableFormatting, cancel);
-        }
-        else
+        if (IsWorkbookXml(sourceEntry))
         {
-            await sourceStream.CopyToAsync(targetStream, cancel);
+            var xml = PatchWorkbook(sourceStream);
+            await SaveXml(xml, targetStream, cancel);
+            return;
         }
+
+        await sourceStream.CopyToAsync(targetStream, cancel);
     }
+
+     static Task SaveXml(XDocument xml, Stream targetStream, Cancel cancel) =>
+        xml.SaveAsync(targetStream, SaveOptions.DisableFormatting, cancel);
+
+     static void SaveXml(XDocument xml, Stream targetStream) =>
+        xml.Save(targetStream, SaveOptions.DisableFormatting);
 
     static XName relationshipName = XName.Get("Relationship", "http://schemas.openxmlformats.org/package/2006/relationships");
 
@@ -125,6 +143,22 @@ public static class DeterministicPackage
         return xml;
     }
 
+    static XNamespace mc = "http://schemas.openxmlformats.org/markup-compatibility/2006";
+    static XNamespace x15ac = "http://schemas.microsoft.com/office/spreadsheetml/2010/11/ac";
+
+    static XDocument PatchWorkbook(Stream sourceStream)
+    {
+        var xml = XDocument.Load(sourceStream);
+
+        var absPath = xml
+            .Descendants(mc + "AlternateContent")
+            .FirstOrDefault(_ => _.Descendants(x15ac + "absPath").Any());
+
+        absPath?.Remove();
+
+        return xml;
+    }
+
     static Entry CreateEntry(Entry source, Archive target)
     {
         var entry = target.CreateEntry(source.FullName, CompressionLevel.Fastest);
@@ -138,4 +172,7 @@ public static class DeterministicPackage
 
     static bool IsRelationships(Entry _) =>
         _.FullName == "_rels/.rels";
+
+    static bool IsWorkbookXml(Entry _) =>
+        _.FullName == "xl/workbook.xml";
 }
