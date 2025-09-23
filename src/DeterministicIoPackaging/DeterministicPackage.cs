@@ -69,7 +69,14 @@ public static class DeterministicPackage
 
         if (IsRelationships(sourceEntry))
         {
-            var xml = PatchRelationships(sourceStream);
+            var xml = PatchRelationships(sourceStream, true);
+            SaveXml(xml, targetStream);
+            return;
+        }
+
+        if (IsWorkbookRelationships(sourceEntry))
+        {
+            var xml = PatchRelationships(sourceStream, false);
             SaveXml(xml, targetStream);
             return;
         }
@@ -96,7 +103,14 @@ public static class DeterministicPackage
         using var targetStream = await targetEntry.OpenAsync(cancel);
         if (IsRelationships(sourceEntry))
         {
-            var xml = PatchRelationships(sourceStream);
+            var xml = PatchRelationships(sourceStream, true);
+            await SaveXml(xml, targetStream, cancel);
+            return;
+        }
+
+        if (IsWorkbookRelationships(sourceEntry))
+        {
+            var xml = PatchRelationships(sourceStream, false);
             await SaveXml(xml, targetStream, cancel);
             return;
         }
@@ -111,21 +125,21 @@ public static class DeterministicPackage
         await sourceStream.CopyToAsync(targetStream, cancel);
     }
 
-     static Task SaveXml(XDocument xml, Stream targetStream, Cancel cancel) =>
+    static Task SaveXml(XDocument xml, Stream targetStream, Cancel cancel) =>
         xml.SaveAsync(targetStream, SaveOptions.DisableFormatting, cancel);
 
-     static void SaveXml(XDocument xml, Stream targetStream) =>
+    static void SaveXml(XDocument xml, Stream targetStream) =>
         xml.Save(targetStream, SaveOptions.DisableFormatting);
 
     static XName relationshipName = XName.Get("Relationship", "http://schemas.openxmlformats.org/package/2006/relationships");
 
-    internal static XDocument PatchRelationships(Stream sourceStream)
+    static XDocument PatchRelationships(Stream sourceStream, bool patchIds)
     {
         var xml = XDocument.Load(sourceStream);
-        return PatchRelationships(xml);
+        return PatchRelationships(xml, patchIds);
     }
 
-    internal static XDocument PatchRelationships(XDocument xml)
+    internal static XDocument PatchRelationships(XDocument xml, bool patchIds)
     {
         var root = xml.Root!;
         var relationships = root.Elements(relationshipName)
@@ -135,10 +149,13 @@ public static class DeterministicPackage
 
         root.Elements(relationshipName).Remove();
 
-        for (var index = 0; index < relationships.Count; index++)
+        if (patchIds)
         {
-            var relationship = relationships[index];
-            relationship.Attribute("Id")!.SetValue($"DeterministicId{index + 1}");
+            for (var index = 0; index < relationships.Count; index++)
+            {
+                var relationship = relationships[index];
+                relationship.Attribute("Id")!.SetValue($"DeterministicId{index + 1}");
+            }
         }
 
         root.Add(relationships);
@@ -179,7 +196,10 @@ public static class DeterministicPackage
         entry.Name.EndsWith("psmdcp");
 
     static bool IsRelationships(Entry _) =>
-        _.FullName == "_rels/.rels";
+        _.FullName is "_rels/.rels";
+
+    static bool IsWorkbookRelationships(Entry _) =>
+        _.FullName is "xl/_rels/workbook.xml.rels";
 
     static bool IsWorkbookXml(Entry _) =>
         _.FullName == "xl/workbook.xml";
