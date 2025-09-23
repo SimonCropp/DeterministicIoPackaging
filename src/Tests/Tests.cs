@@ -2,12 +2,38 @@
 public class Tests
 {
     [Test]
-    public Task AbsPath()
+    public Task AbsPathZip()
     {
-        var packagePath = Path.Combine(directory, "sample.WithAbsPath.xlsx");
-        var stream = Convert(packagePath);
+        var file = Path.Combine(directory, "sample.WithAbsPath.xlsx");
+        var stream = Convert(file);
 
         return VerifyZip(stream);
+    }
+
+    [Test]
+    public Task WithWorkbookRelsZip()
+    {
+        var file = Path.Combine(directory, "sample.WithWorkbookRels.xlsx");
+        var stream = Convert(file);
+
+        return VerifyZip(stream);
+    }
+    [Test]
+    public Task AbsPath()
+    {
+        var file = Path.Combine(directory, "sample.WithAbsPath.xlsx");
+        var stream = Convert(file);
+
+        return Verify(stream,extension: "xlsx");
+    }
+
+    [Test]
+    public Task WithWorkbookRels()
+    {
+        var file = Path.Combine(directory, "sample.WithWorkbookRels.xlsx");
+        var stream = Convert(file);
+
+        return Verify(stream,extension: "xlsx");
     }
 
     [Test]

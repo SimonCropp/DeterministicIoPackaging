@@ -39,7 +39,7 @@ Example file formats that leverage System.IO.Packaging
 using var sourceStream = File.OpenRead(packagePath);
 await DeterministicPackage.ConvertAsync(sourceStream, targetStream);
 ```
-<sup><a href='/src/Tests/Tests.cs#L79-L84' title='Snippet source file'>snippet source</a> | <a href='#snippet-ConvertAsync' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/Tests/Tests.cs#L105-L110' title='Snippet source file'>snippet source</a> | <a href='#snippet-ConvertAsync' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 
@@ -51,7 +51,7 @@ await DeterministicPackage.ConvertAsync(sourceStream, targetStream);
 using var sourceStream = File.OpenRead(packagePath);
 await DeterministicPackage.ConvertAsync(sourceStream, targetStream);
 ```
-<sup><a href='/src/Tests/Tests.cs#L79-L84' title='Snippet source file'>snippet source</a> | <a href='#snippet-ConvertAsync' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/Tests/Tests.cs#L105-L110' title='Snippet source file'>snippet source</a> | <a href='#snippet-ConvertAsync' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 
