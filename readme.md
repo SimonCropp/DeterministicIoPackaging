@@ -29,6 +29,8 @@ Example file formats that leverage System.IO.Packaging
    * Order `Relationship`s by `Type`
  * For the relationships entry `xl/_rels/workbook.xml.rels`
    * Order `Relationship`s by `Type`
+ * For the relationships entry `xl/_rels/workbook.xml.rels`
+   * Remove the `created`, `lastModifiedBy`, and `modified` elements
 
 
 ## Usage
