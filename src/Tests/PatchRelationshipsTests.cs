@@ -1,5 +1,5 @@
 [TestFixture]
-public class PatchRelationshipsTests
+public class WorkbookRelationshipsTests
 {
     [Test]
     public Task Run()
@@ -13,7 +13,7 @@ public class PatchRelationshipsTests
               <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
             </Relationships>
             """);
-        DeterministicPackage.PatchRelationships(xml, true);
+        WorkbookRelationships.PatchRelationships(xml, true);
 
         return Verify(xml);
     }
@@ -29,7 +29,7 @@ public class PatchRelationshipsTests
               <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
             </Relationships>
             """);
-        DeterministicPackage.PatchRelationships(xml, false);
+        WorkbookRelationships.PatchRelationships(xml, false);
 
         return Verify(xml);
     }
