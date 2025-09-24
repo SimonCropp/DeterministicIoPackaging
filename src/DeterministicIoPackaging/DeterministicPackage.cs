@@ -28,7 +28,7 @@ public static partial class DeterministicPackage
         var targetEntry = CreateEntry(sourceEntry, targetArchive);
         using var targetStream = targetEntry.Open();
 
-        if (IsRelationships(sourceEntry))
+        if (sourceEntry.IsRelationships())
         {
             var xml = Relationships.PatchRelationships(sourceStream, true);
             SaveXml(xml, targetStream);
@@ -62,7 +62,7 @@ public static partial class DeterministicPackage
         using var sourceStream = await sourceEntry.OpenAsync(cancel);
         var targetEntry = CreateEntry(sourceEntry, targetArchive);
         using var targetStream = await targetEntry.OpenAsync(cancel);
-        if (IsRelationships(sourceEntry))
+        if (sourceEntry.IsRelationships())
         {
             var xml = Relationships.PatchRelationships(sourceStream, true);
             await SaveXml(xml, targetStream, cancel);
@@ -92,21 +92,6 @@ public static partial class DeterministicPackage
     static void SaveXml(XDocument xml, Stream targetStream) =>
         xml.Save(targetStream, SaveOptions.DisableFormatting);
 
-
-
-    static XDocument PatchSheet(Stream sourceStream)
-    {
-        var xml = XDocument.Load(sourceStream);
-        return PatchSheet(xml);
-    }
-
-    internal static XDocument PatchSheet(XDocument xml)
-    {
-        XNamespace xr = "http://schemas.microsoft.com/office/spreadsheetml/2014/revision";
-        xml.Root!.Attribute(xr + "uid")?.Remove();
-        return xml;
-    }
-
     static Entry CreateEntry(Entry source, Archive target)
     {
         var entry = target.CreateEntry(source.FullName, CompressionLevel.Fastest);
@@ -117,7 +102,4 @@ public static partial class DeterministicPackage
     static bool IsPsmdcp(Entry entry) =>
         entry.FullName.StartsWith("package/services/metadata/core-properties/") &&
         entry.Name.EndsWith("psmdcp");
-
-    static bool IsRelationships(Entry _) =>
-        _.FullName is "_rels/.rels";
 }

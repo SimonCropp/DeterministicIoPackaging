@@ -1,5 +1,5 @@
 [TestFixture]
-public class PatchSheetTests
+public class SheetTests
 {
     [Test]
     public Task Run()
@@ -35,7 +35,7 @@ public class PatchSheetTests
               <pageMargins left="0.75" right="0.75" top="1" bottom="1" header="0.5" footer="0.5"/>
             </worksheet>
             """);
-        DeterministicPackage.PatchSheet(xml);
+        Sheet.PatchSheet(xml);
 
         return Verify(xml);
     }

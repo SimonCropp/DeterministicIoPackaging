@@ -5,6 +5,9 @@ static class Relationships
     public static bool IsWorkbookRelationships(this Entry entry) =>
         entry.FullName is "xl/_rels/workbook.xml.rels";
 
+    public static bool IsRelationships(this Entry entry) =>
+        entry.FullName is "_rels/.rels";
+
     public static XDocument PatchRelationships(Stream sourceStream, bool patchIds)
     {
         var xml = XDocument.Load(sourceStream);
