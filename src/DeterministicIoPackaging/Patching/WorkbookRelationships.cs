@@ -13,11 +13,10 @@ static class WorkbookRelationships
     public static async Task<XDocument> Patch(Stream stream, Cancel cancel)
     {
         var xml = await XDocument.LoadAsync(stream, LoadOptions.None, cancel);
-
         Patch(xml);
-
         return xml;
     }
+
     static void Patch(XDocument xml)
     {
         var root = xml.Root!;

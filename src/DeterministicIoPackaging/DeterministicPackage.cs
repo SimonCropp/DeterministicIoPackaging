@@ -49,6 +49,13 @@ public static partial class DeterministicPackage
             return;
         }
 
+        if (sourceEntry.IsWorksheetXml())
+        {
+            var xml = Sheet.Patch(sourceStream);
+            SaveXml(xml, targetStream);
+            return;
+        }
+
         sourceStream.CopyTo(targetStream);
     }
 
@@ -79,6 +86,13 @@ public static partial class DeterministicPackage
         if (sourceEntry.IsWorkbookXml())
         {
             var xml = await Workbook.Patch(sourceStream, cancel);
+            await SaveXml(xml, targetStream, cancel);
+            return;
+        }
+
+        if (sourceEntry.IsWorksheetXml())
+        {
+            var xml = await Sheet.Patch(sourceStream, cancel);
             await SaveXml(xml, targetStream, cancel);
             return;
         }

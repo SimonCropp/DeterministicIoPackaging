@@ -7,6 +7,13 @@ static class Sheet
         return xml;
     }
 
+    public static async Task<XDocument> Patch(Stream stream, Cancel cancel)
+    {
+        var xml = await XDocument.LoadAsync(stream, LoadOptions.None, cancel);
+        Patch(xml);
+        return xml;
+    }
+
     static XNamespace xr = "http://schemas.microsoft.com/office/spreadsheetml/2014/revision";
     static XName xName = xr + "uid";
 
