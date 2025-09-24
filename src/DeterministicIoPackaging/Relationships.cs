@@ -8,10 +8,10 @@ static class Relationships
     public static bool IsRelationships(this Entry entry) =>
         entry.FullName is "_rels/.rels";
 
-    public static XDocument PatchRelationships(Stream sourceStream, bool patchIds)
+    public static XDocument PatchRelationships(Stream sourceStream)
     {
         var xml = XDocument.Load(sourceStream);
-        PatchRelationships(xml, patchIds);
+        PatchRelationships(xml, true);
         return xml;
     }
 

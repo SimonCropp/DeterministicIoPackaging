@@ -30,7 +30,7 @@ public static partial class DeterministicPackage
 
         if (sourceEntry.IsRelationships())
         {
-            var xml = Relationships.PatchRelationships(sourceStream, true);
+            var xml = Relationships.PatchRelationships(sourceStream);
             SaveXml(xml, targetStream);
             return;
         }
@@ -64,7 +64,7 @@ public static partial class DeterministicPackage
         using var targetStream = await targetEntry.OpenAsync(cancel);
         if (sourceEntry.IsRelationships())
         {
-            var xml = Relationships.PatchRelationships(sourceStream, true);
+            var xml = Relationships.PatchRelationships(sourceStream);
             await SaveXml(xml, targetStream, cancel);
             return;
         }
