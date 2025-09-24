@@ -25,7 +25,7 @@ public class RelationshipsTests
                 Target="package/services/metadata/core-properties/f81c51cec5594be694368ed6b7beba9.psmdcp"/>
             </Relationships>
             """);
-        Relationships.PatchRelationships(xml, true);
+        Relationships.PatchRelationships(xml);
 
         return Verify(xml);
     }

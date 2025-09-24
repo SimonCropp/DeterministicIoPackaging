@@ -1,7 +1,5 @@
 static class Relationships
 {
-    static XName relationshipName = XName.Get("Relationship", "http://schemas.openxmlformats.org/package/2006/relationships");
-
     public static bool IsWorkbookRelationships(this Entry entry) =>
         entry.FullName is "xl/_rels/workbook.xml.rels";
 
@@ -11,7 +9,7 @@ static class Relationships
     public static XDocument PatchRelationships(Stream sourceStream)
     {
         var xml = XDocument.Load(sourceStream);
-        PatchRelationships(xml, true);
+        PatchRelationships(xml);
         return xml;
     }
 
@@ -22,29 +20,34 @@ static class Relationships
         return xml;
     }
 
-    public static void PatchWorkbookRelationships(XDocument xml) =>
-        PatchRelationships(xml, false);
-
-    public static void PatchRelationships(XDocument xml, bool patchIds)
+    public static void PatchWorkbookRelationships(XDocument xml)
     {
         var root = xml.Root!;
-        var relationships = root.Elements(relationshipName)
-            .Where(_ => !IsPsmdcpElement(_))
+        var relationships = root.Elements()
+            .OrderBy(_ => _.Attribute("Type")!.Value)
+            .ToList();
+        root.ReplaceAll(relationships);
+    }
+
+    public static void PatchRelationships(XDocument xml)
+    {
+        var root = xml.Root!;
+        var relationships = root.Elements()
             .OrderBy(_ => _.Attribute("Type")!.Value)
             .ToList();
 
-        root.Elements(relationshipName).Remove();
-
-        if (patchIds)
+        foreach (var element in relationships.Where(IsPsmdcpElement).ToList())
         {
-            for (var index = 0; index < relationships.Count; index++)
-            {
-                var relationship = relationships[index];
-                relationship.Attribute("Id")!.SetValue($"DeterministicId{index + 1}");
-            }
+            relationships.Remove(element);
         }
 
-        root.Add(relationships);
+        for (var index = 0; index < relationships.Count; index++)
+        {
+            var relationship = relationships[index];
+            relationship.Attribute("Id")!.SetValue($"DeterministicId{index + 1}");
+        }
+
+        root.ReplaceAll(relationships);
 
         static bool IsPsmdcpElement(XElement element)
         {
