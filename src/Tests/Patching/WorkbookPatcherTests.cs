@@ -4,7 +4,7 @@ public class WorkbookPatcherTests
     [Test]
     public Task Patch()
     {
-        var stream = new MemoryStream(
+        var xml =
             """
             <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
             <worksheet
@@ -34,9 +34,9 @@ public class WorkbookPatcherTests
               </sheetData>
               <pageMargins left="0.75" right="0.75" top="1" bottom="1" header="0.5" footer="0.5"/>
             </worksheet>
-            """u8.ToArray());
-        var xml = WorkbookPatcher.Patch(stream);
+            """;
 
-        return Verify(xml);
+        var document = PatchHelper.Patch<WorkbookPatcher>(xml);
+        return Verify(document);
     }
 }

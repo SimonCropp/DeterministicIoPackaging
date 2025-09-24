@@ -5,6 +5,11 @@ public static partial class DeterministicPackage
     public static DateTime StableDate { get; } = new(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     public static DateTimeOffset StableDateOffset { get; } = new(StableDate);
 
+    private static IReadOnlyList<IPatcher> patchers = [
+        new RelationshipPatcher(),
+        new SheetPatcher(),
+        new WorkbookPatcher(),
+        new WorkbookRelationshipPatcher() ];
     static Archive CreateArchive(Stream target) => new(target, ZipArchiveMode.Create, leaveOpen: true);
 
     static Archive ReadArchive(Stream source)
@@ -28,30 +33,15 @@ public static partial class DeterministicPackage
         var targetEntry = CreateEntry(sourceEntry, targetArchive);
         using var targetStream = targetEntry.Open();
 
-        if (sourceEntry.IsRelationships())
+        foreach (var patcher in patchers)
         {
-            var xml = RelationshipPatcher.Patch(sourceStream);
-            SaveXml(xml, targetStream);
-            return;
-        }
+            if (!patcher.IsMatch(sourceEntry))
+            {
+                continue;
+            }
 
-        if (sourceEntry.IsWorkbookRelationships())
-        {
-            var xml = WorkbookRelationshipPatcher.Patch(sourceStream);
-            SaveXml(xml, targetStream);
-            return;
-        }
-
-        if (sourceEntry.IsWorkbookXml())
-        {
-            var xml = WorkbookPatcher.Patch(sourceStream);
-            SaveXml(xml, targetStream);
-            return;
-        }
-
-        if (sourceEntry.IsWorksheetXml())
-        {
-            var xml = SheetPatcher.Patch(sourceStream);
+            var xml = XDocument.Load(sourceStream);
+            patcher.PatchXml(xml);
             SaveXml(xml, targetStream);
             return;
         }
@@ -69,30 +59,15 @@ public static partial class DeterministicPackage
         using var sourceStream = await sourceEntry.OpenAsync(cancel);
         var targetEntry = CreateEntry(sourceEntry, targetArchive);
         using var targetStream = await targetEntry.OpenAsync(cancel);
-        if (sourceEntry.IsRelationships())
+        foreach (var patcher in patchers)
         {
-            var xml = await RelationshipPatcher.Patch(sourceStream, cancel);
-            await SaveXml(xml, targetStream, cancel);
-            return;
-        }
+            if (!patcher.IsMatch(sourceEntry))
+            {
+                continue;
+            }
 
-        if (sourceEntry.IsWorkbookRelationships())
-        {
-            var xml = await WorkbookRelationshipPatcher.Patch(sourceStream, cancel);
-            await SaveXml(xml, targetStream, cancel);
-            return;
-        }
-
-        if (sourceEntry.IsWorkbookXml())
-        {
-            var xml = await WorkbookPatcher.Patch(sourceStream, cancel);
-            await SaveXml(xml, targetStream, cancel);
-            return;
-        }
-
-        if (sourceEntry.IsWorksheetXml())
-        {
-            var xml = await SheetPatcher.Patch(sourceStream, cancel);
+            var xml = await XDocument.LoadAsync(sourceStream, LoadOptions.None, cancel);
+            patcher.PatchXml(xml);
             await SaveXml(xml, targetStream, cancel);
             return;
         }

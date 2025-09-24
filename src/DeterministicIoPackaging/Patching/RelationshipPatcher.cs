@@ -1,23 +1,9 @@
-static class RelationshipPatcher
+class RelationshipPatcher : IPatcher
 {
-    public static bool IsRelationships(this Entry entry) =>
+    public bool IsMatch(Entry entry) =>
         entry.FullName is "_rels/.rels";
 
-    public static XDocument Patch(Stream stream)
-    {
-        var xml = XDocument.Load(stream);
-        Patch(xml);
-        return xml;
-    }
-
-    public static async Task<XDocument> Patch(Stream stream, Cancel cancel)
-    {
-        var xml = await XDocument.LoadAsync(stream, LoadOptions.None, cancel);
-        Patch(xml);
-        return xml;
-    }
-
-    static void Patch(XDocument xml)
+    public void PatchXml(XDocument xml)
     {
         var root = xml.Root!;
         var relationships = root.Elements()
@@ -36,11 +22,11 @@ static class RelationshipPatcher
         }
 
         root.ReplaceAll(relationships);
+    }
 
-        static bool IsPsmdcpElement(XElement element)
-        {
-            var target = element.Attribute("Target")!;
-            return target.Value.EndsWith(".psmdcp");
-        }
+    static bool IsPsmdcpElement(XElement element)
+    {
+        var target = element.Attribute("Target")!;
+        return target.Value.EndsWith(".psmdcp");
     }
 }
