@@ -38,7 +38,7 @@ public static partial class DeterministicPackage
             return;
         }
 
-        if (IsWorkbookRelationships(sourceEntry))
+        if (sourceEntry.IsWorkbookRelationships())
         {
             var xml = PatchRelationships(sourceStream, false);
             SaveXml(xml, targetStream);
@@ -72,7 +72,7 @@ public static partial class DeterministicPackage
             return;
         }
 
-        if (IsWorkbookRelationships(sourceEntry))
+        if (sourceEntry.IsWorkbookRelationships())
         {
             var xml = PatchRelationships(sourceStream, false);
             await SaveXml(xml, targetStream, cancel);
@@ -157,8 +157,4 @@ public static partial class DeterministicPackage
 
     static bool IsRelationships(Entry _) =>
         _.FullName is "_rels/.rels";
-
-    static bool IsWorkbookRelationships(Entry _) =>
-        _.FullName is "xl/_rels/workbook.xml.rels";
-
 }
