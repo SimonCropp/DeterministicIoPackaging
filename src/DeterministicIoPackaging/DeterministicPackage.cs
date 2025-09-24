@@ -30,14 +30,14 @@ public static partial class DeterministicPackage
 
         if (IsRelationships(sourceEntry))
         {
-            var xml = PatchRelationships(sourceStream, true);
+            var xml = Relationships.PatchRelationships(sourceStream, true);
             SaveXml(xml, targetStream);
             return;
         }
 
         if (sourceEntry.IsWorkbookRelationships())
         {
-            var xml = PatchRelationships(sourceStream, false);
+            var xml = Relationships.PatchWorkbookRelationships(sourceStream);
             SaveXml(xml, targetStream);
             return;
         }
@@ -64,14 +64,14 @@ public static partial class DeterministicPackage
         using var targetStream = await targetEntry.OpenAsync(cancel);
         if (IsRelationships(sourceEntry))
         {
-            var xml = PatchRelationships(sourceStream, true);
+            var xml = Relationships.PatchRelationships(sourceStream, true);
             await SaveXml(xml, targetStream, cancel);
             return;
         }
 
         if (sourceEntry.IsWorkbookRelationships())
         {
-            var xml = PatchRelationships(sourceStream, false);
+            var xml = Relationships.PatchWorkbookRelationships(sourceStream);
             await SaveXml(xml, targetStream, cancel);
             return;
         }
@@ -93,11 +93,6 @@ public static partial class DeterministicPackage
         xml.Save(targetStream, SaveOptions.DisableFormatting);
 
 
-    static XDocument PatchRelationships(Stream sourceStream, bool patchIds)
-    {
-        var xml = XDocument.Load(sourceStream);
-        return WorkbookRelationships.PatchRelationships(xml, patchIds);
-    }
 
     static XDocument PatchSheet(Stream sourceStream)
     {

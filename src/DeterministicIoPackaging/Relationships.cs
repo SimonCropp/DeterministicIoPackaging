@@ -1,8 +1,25 @@
-static class WorkbookRelationships
+static class Relationships
 {
     static XName relationshipName = XName.Get("Relationship", "http://schemas.openxmlformats.org/package/2006/relationships");
+
     public static bool IsWorkbookRelationships(this Entry entry) =>
         entry.FullName is "xl/_rels/workbook.xml.rels";
+
+    public static XDocument PatchRelationships(Stream sourceStream, bool patchIds)
+    {
+        var xml = XDocument.Load(sourceStream);
+        return PatchRelationships(xml, patchIds);
+    }
+
+    public static XDocument PatchWorkbookRelationships(Stream sourceStream)
+    {
+        var xml = XDocument.Load(sourceStream);
+        return PatchWorkbookRelationships(xml);
+    }
+
+    public static XDocument PatchWorkbookRelationships(XDocument xml) =>
+        PatchRelationships(xml, false);
+
     public static XDocument PatchRelationships(XDocument xml, bool patchIds)
     {
         var root = xml.Root!;

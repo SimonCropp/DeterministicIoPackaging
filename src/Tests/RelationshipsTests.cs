@@ -1,5 +1,5 @@
 [TestFixture]
-public class WorkbookRelationshipsTests
+public class RelationshipsTests
 {
     [Test]
     public Task Run()
@@ -13,12 +13,12 @@ public class WorkbookRelationshipsTests
               <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
             </Relationships>
             """);
-        WorkbookRelationships.PatchRelationships(xml, true);
+        Relationships.PatchRelationships(xml, true);
 
         return Verify(xml);
     }
     [Test]
-    public Task RunWithoutIdPatch()
+    public Task PatchWorkbook()
     {
         var xml = XDocument.Parse(
             """
@@ -29,7 +29,7 @@ public class WorkbookRelationshipsTests
               <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
             </Relationships>
             """);
-        WorkbookRelationships.PatchRelationships(xml, false);
+        Relationships.PatchWorkbookRelationships(xml);
 
         return Verify(xml);
     }
