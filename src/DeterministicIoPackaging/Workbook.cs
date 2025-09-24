@@ -1,5 +1,3 @@
-using Entry = System.IO.Compression.ZipArchiveEntry;
-
 static class Workbook
 {
     static XNamespace mc = "http://schemas.openxmlformats.org/markup-compatibility/2006";

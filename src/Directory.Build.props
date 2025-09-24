@@ -13,5 +13,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Using Include="System.ReadOnlySpan&lt;System.Char&gt;" Alias="CharSpan" />
+    <Using Include="System.IO.Compression.ZipArchiveEntry" Alias="Entry" />
+    <Using Include="System.IO.Compression.ZipArchive" Alias="Archive" />
   </ItemGroup>
 </Project>

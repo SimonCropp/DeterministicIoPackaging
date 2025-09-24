@@ -1,7 +1,4 @@
-﻿using Entry = System.IO.Compression.ZipArchiveEntry;
-using Archive = System.IO.Compression.ZipArchive;
-
-namespace DeterministicIoPackaging;
+﻿namespace DeterministicIoPackaging;
 
 public static partial class DeterministicPackage
 {
