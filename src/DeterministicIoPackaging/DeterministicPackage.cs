@@ -3,46 +3,10 @@ using Archive = System.IO.Compression.ZipArchive;
 
 namespace DeterministicIoPackaging;
 
-public static class DeterministicPackage
+public static partial class DeterministicPackage
 {
     public static DateTime StableDate { get; } = new(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     public static DateTimeOffset StableDateOffset { get; } = new(StableDate);
-
-    public static MemoryStream Convert(Stream source)
-    {
-        var target = new MemoryStream();
-        Convert(source, target);
-        target.Position = 0;
-        return target;
-    }
-
-    public static async Task<MemoryStream> ConvertAsync(Stream source)
-    {
-        var target = new MemoryStream();
-        await ConvertAsync(source, target);
-        target.Position = 0;
-        return target;
-    }
-
-    public static void Convert(Stream source, Stream target)
-    {
-        using var sourceArchive = ReadArchive(source);
-        using var targetArchive = CreateArchive(target);
-        foreach (var sourceEntry in sourceArchive.Entries)
-        {
-            DuplicateEntry(sourceEntry, targetArchive);
-        }
-    }
-
-    public static async Task ConvertAsync(Stream source, Stream target, Cancel token = default)
-    {
-        using var sourceArchive = ReadArchive(source);
-        using var targetArchive = CreateArchive(target);
-        foreach (var sourceEntry in sourceArchive.Entries)
-        {
-            await DuplicateEntryAsync(sourceEntry, targetArchive, token);
-        }
-    }
 
     static Archive CreateArchive(Stream target) => new(target, ZipArchiveMode.Create, leaveOpen: true);
 
@@ -81,9 +45,9 @@ public static class DeterministicPackage
             return;
         }
 
-        if (IsWorkbookXml(sourceEntry))
+        if (sourceEntry.IsWorkbookXml())
         {
-            var xml = PatchWorkbook(sourceStream);
+            var xml = Workbook.Patch(sourceStream);
             SaveXml(xml, targetStream);
             return;
         }
@@ -115,9 +79,9 @@ public static class DeterministicPackage
             return;
         }
 
-        if (IsWorkbookXml(sourceEntry))
+        if (sourceEntry.IsWorkbookXml())
         {
-            var xml = PatchWorkbook(sourceStream);
+            var xml = Workbook.Patch(sourceStream);
             await SaveXml(xml, targetStream, cancel);
             return;
         }
@@ -167,20 +131,16 @@ public static class DeterministicPackage
             return target.Value.EndsWith(".psmdcp");
         }
     }
-
-    static XNamespace mc = "http://schemas.openxmlformats.org/markup-compatibility/2006";
-    static XNamespace x15ac = "http://schemas.microsoft.com/office/spreadsheetml/2010/11/ac";
-
-    static XDocument PatchWorkbook(Stream sourceStream)
+    static XDocument PatchSheet(Stream sourceStream)
     {
         var xml = XDocument.Load(sourceStream);
+        return PatchSheet(xml);
+    }
 
-        var absPath = xml
-            .Descendants(mc + "AlternateContent")
-            .FirstOrDefault(_ => _.Descendants(x15ac + "absPath").Any());
-
-        absPath?.Remove();
-
+    internal static XDocument PatchSheet(XDocument xml)
+    {
+        XNamespace xr = "http://schemas.microsoft.com/office/spreadsheetml/2014/revision";
+        xml.Root!.Attribute(xr + "uid")?.Remove();
         return xml;
     }
 
@@ -201,6 +161,4 @@ public static class DeterministicPackage
     static bool IsWorkbookRelationships(Entry _) =>
         _.FullName is "xl/_rels/workbook.xml.rels";
 
-    static bool IsWorkbookXml(Entry _) =>
-        _.FullName == "xl/workbook.xml";
 }
