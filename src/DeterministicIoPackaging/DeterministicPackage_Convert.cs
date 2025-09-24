@@ -22,7 +22,7 @@ public static partial class DeterministicPackage
     {
         using var sourceArchive = ReadArchive(source);
         using var targetArchive = CreateArchive(target);
-        foreach (var sourceEntry in sourceArchive.Entries)
+        foreach (var sourceEntry in OrderedEntries(sourceArchive))
         {
             DuplicateEntry(sourceEntry, targetArchive);
         }
@@ -32,10 +32,13 @@ public static partial class DeterministicPackage
     {
         using var sourceArchive = ReadArchive(source);
         using var targetArchive = CreateArchive(target);
-        foreach (var sourceEntry in sourceArchive.Entries
-                     .OrderBy(_ => _.FullName))
+        foreach (var sourceEntry in OrderedEntries(sourceArchive))
         {
             await DuplicateEntryAsync(sourceEntry, targetArchive, token);
         }
     }
+
+    private static IOrderedEnumerable<Entry> OrderedEntries(this Archive archive) =>
+        archive.Entries
+            .OrderBy(_ => _.FullName);
 }
