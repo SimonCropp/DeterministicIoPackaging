@@ -24,8 +24,11 @@ Example file formats that leverage System.IO.Packaging
  * Duplicate each entry with a consistent compression
  * Omit `package/services/metadata/core-properties/*.psmdcp` entries
  * For the relationships entry `_rels/.rels`
-   * Modify the Id of each relationship to be deterministic
-   * Remove the relationship for the `.psmdcp` entry
+   * Modify the `Id` of each `Relationship` to be deterministic
+   * Remove the `Relationship` for the `.psmdcp` entry
+   * Order `Relationship`s by `Type`
+ * For the relationships entry `xl/_rels/workbook.xml.rels`
+   * Order `Relationship`s by `Type`
 
 
 ## Usage
