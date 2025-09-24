@@ -8,19 +8,21 @@ static class Relationships
     public static XDocument PatchRelationships(Stream sourceStream, bool patchIds)
     {
         var xml = XDocument.Load(sourceStream);
-        return PatchRelationships(xml, patchIds);
+        PatchRelationships(xml, patchIds);
+        return xml;
     }
 
     public static XDocument PatchWorkbookRelationships(Stream sourceStream)
     {
         var xml = XDocument.Load(sourceStream);
-        return PatchWorkbookRelationships(xml);
+        PatchWorkbookRelationships(xml);
+        return xml;
     }
 
-    public static XDocument PatchWorkbookRelationships(XDocument xml) =>
+    public static void PatchWorkbookRelationships(XDocument xml) =>
         PatchRelationships(xml, false);
 
-    public static XDocument PatchRelationships(XDocument xml, bool patchIds)
+    public static void PatchRelationships(XDocument xml, bool patchIds)
     {
         var root = xml.Root!;
         var relationships = root.Elements(relationshipName)
@@ -40,7 +42,6 @@ static class Relationships
         }
 
         root.Add(relationships);
-        return xml;
 
         static bool IsPsmdcpElement(XElement rel)
         {
