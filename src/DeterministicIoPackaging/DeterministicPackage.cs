@@ -5,11 +5,15 @@ public static partial class DeterministicPackage
     public static DateTime StableDate { get; } = new(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     public static DateTimeOffset StableDateOffset { get; } = new(StableDate);
 
-    private static IReadOnlyList<IPatcher> patchers = [
+    static IReadOnlyList<IPatcher> patchers =
+    [
         new RelationshipPatcher(),
         new SheetPatcher(),
         new WorkbookPatcher(),
-        new WorkbookRelationshipPatcher() ];
+        new WorkbookRelationshipPatcher(),
+        new CorePatcher()
+    ];
+
     static Archive CreateArchive(Stream target) => new(target, ZipArchiveMode.Create, leaveOpen: true);
 
     static Archive ReadArchive(Stream source)
