@@ -46,9 +46,9 @@ static class Relationships
 
         root.Add(relationships);
 
-        static bool IsPsmdcpElement(XElement rel)
+        static bool IsPsmdcpElement(XElement element)
         {
-            var target = rel.Attribute("Target")!;
+            var target = element.Attribute("Target")!;
             return target.Value.EndsWith(".psmdcp");
         }
     }
