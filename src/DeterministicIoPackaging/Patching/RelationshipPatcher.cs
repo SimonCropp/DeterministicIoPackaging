@@ -8,6 +8,7 @@ class RelationshipPatcher : IPatcher
         var root = xml.Root!;
         var relationships = root.Elements()
             .OrderBy(_ => _.Attribute("Type")!.Value)
+            .ThenBy(_ => _.Attribute("Target")!.Value)
             .ToList();
 
         foreach (var element in relationships.Where(IsPsmdcpElement).ToList())
