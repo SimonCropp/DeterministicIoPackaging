@@ -30,14 +30,14 @@ public static partial class DeterministicPackage
 
         if (sourceEntry.IsRelationships())
         {
-            var xml = Relationships.PatchRelationships(sourceStream);
+            var xml = Relationships.Patch(sourceStream);
             SaveXml(xml, targetStream);
             return;
         }
 
         if (sourceEntry.IsWorkbookRelationships())
         {
-            var xml = Relationships.PatchWorkbookRelationships(sourceStream);
+            var xml = WorkbookRelationships.Patch(sourceStream);
             SaveXml(xml, targetStream);
             return;
         }
@@ -64,21 +64,21 @@ public static partial class DeterministicPackage
         using var targetStream = await targetEntry.OpenAsync(cancel);
         if (sourceEntry.IsRelationships())
         {
-            var xml = Relationships.PatchRelationships(sourceStream);
+            var xml = await Relationships.Patch(sourceStream, cancel);
             await SaveXml(xml, targetStream, cancel);
             return;
         }
 
         if (sourceEntry.IsWorkbookRelationships())
         {
-            var xml = Relationships.PatchWorkbookRelationships(sourceStream);
+            var xml = await WorkbookRelationships.Patch(sourceStream, cancel);
             await SaveXml(xml, targetStream, cancel);
             return;
         }
 
         if (sourceEntry.IsWorkbookXml())
         {
-            var xml = Workbook.Patch(sourceStream);
+            var xml = await Workbook.Patch(sourceStream, cancel);
             await SaveXml(xml, targetStream, cancel);
             return;
         }

@@ -1,35 +1,24 @@
 static class Relationships
 {
-    public static bool IsWorkbookRelationships(this Entry entry) =>
-        entry.FullName is "xl/_rels/workbook.xml.rels";
-
     public static bool IsRelationships(this Entry entry) =>
         entry.FullName is "_rels/.rels";
 
-    public static XDocument PatchRelationships(Stream sourceStream)
+    public static XDocument Patch(Stream stream)
     {
-        var xml = XDocument.Load(sourceStream);
-        PatchRelationships(xml);
+        var xml = XDocument.Load(stream);
+        Patch(xml);
         return xml;
     }
 
-    public static XDocument PatchWorkbookRelationships(Stream sourceStream)
+    public static async Task<XDocument> Patch(Stream stream, Cancel cancel)
     {
-        var xml = XDocument.Load(sourceStream);
-        PatchWorkbookRelationships(xml);
+        var xml = await XDocument.LoadAsync(stream, LoadOptions.None, cancel);
+
+        Patch(xml);
+
         return xml;
     }
-
-    public static void PatchWorkbookRelationships(XDocument xml)
-    {
-        var root = xml.Root!;
-        var relationships = root.Elements()
-            .OrderBy(_ => _.Attribute("Type")!.Value)
-            .ToList();
-        root.ReplaceAll(relationships);
-    }
-
-    public static void PatchRelationships(XDocument xml)
+    static void Patch(XDocument xml)
     {
         var root = xml.Root!;
         var relationships = root.Elements()

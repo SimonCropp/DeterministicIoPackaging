@@ -2,9 +2,9 @@
 public class SheetTests
 {
     [Test]
-    public Task Run()
+    public Task Patch()
     {
-        var xml = XDocument.Parse(
+        var stream = new MemoryStream(
             """
             <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
             <worksheet
@@ -34,8 +34,8 @@ public class SheetTests
               </sheetData>
               <pageMargins left="0.75" right="0.75" top="1" bottom="1" header="0.5" footer="0.5"/>
             </worksheet>
-            """);
-        Sheet.PatchSheet(xml);
+            """u8.ToArray());
+        var xml = Sheet.Patch(stream);
 
         return Verify(xml);
     }
