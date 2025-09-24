@@ -1,4 +1,4 @@
-static class Relationships
+static class RelationshipPatcher
 {
     public static bool IsRelationships(this Entry entry) =>
         entry.FullName is "_rels/.rels";

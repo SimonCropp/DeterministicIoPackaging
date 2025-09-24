@@ -1,10 +1,10 @@
 [TestFixture]
-public class RelationshipsTests
+public class RelationshipPatcherTests
 {
     [Test]
     public Task Patch()
     {
-        var xml = Relationships.Patch(
+        var xml = RelationshipPatcher.Patch(
             new MemoryStream(
                 """
                 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>

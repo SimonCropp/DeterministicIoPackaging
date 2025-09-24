@@ -1,4 +1,4 @@
-static class Workbook
+static class WorkbookPatcher
 {
     static XNamespace mc = "http://schemas.openxmlformats.org/markup-compatibility/2006";
     static XName alternateContent = mc + "AlternateContent";

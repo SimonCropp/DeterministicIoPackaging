@@ -1,10 +1,10 @@
 [TestFixture]
-public class WorkbookRelationshipsTests
+public class WorkbookRelationshipPatcherTests
 {
     [Test]
     public Task Patch()
     {
-        var xml = WorkbookRelationships.Patch(
+        var xml = WorkbookRelationshipPatcher.Patch(
             new MemoryStream(
                 """
                 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>

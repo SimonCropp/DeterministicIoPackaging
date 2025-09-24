@@ -1,4 +1,4 @@
-static class Sheet
+static class SheetPatcher
 {
     internal static XDocument Patch(Stream stream)
     {

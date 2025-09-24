@@ -30,28 +30,28 @@ public static partial class DeterministicPackage
 
         if (sourceEntry.IsRelationships())
         {
-            var xml = Relationships.Patch(sourceStream);
+            var xml = RelationshipPatcher.Patch(sourceStream);
             SaveXml(xml, targetStream);
             return;
         }
 
         if (sourceEntry.IsWorkbookRelationships())
         {
-            var xml = WorkbookRelationships.Patch(sourceStream);
+            var xml = WorkbookRelationshipPatcher.Patch(sourceStream);
             SaveXml(xml, targetStream);
             return;
         }
 
         if (sourceEntry.IsWorkbookXml())
         {
-            var xml = Workbook.Patch(sourceStream);
+            var xml = WorkbookPatcher.Patch(sourceStream);
             SaveXml(xml, targetStream);
             return;
         }
 
         if (sourceEntry.IsWorksheetXml())
         {
-            var xml = Sheet.Patch(sourceStream);
+            var xml = SheetPatcher.Patch(sourceStream);
             SaveXml(xml, targetStream);
             return;
         }
@@ -71,28 +71,28 @@ public static partial class DeterministicPackage
         using var targetStream = await targetEntry.OpenAsync(cancel);
         if (sourceEntry.IsRelationships())
         {
-            var xml = await Relationships.Patch(sourceStream, cancel);
+            var xml = await RelationshipPatcher.Patch(sourceStream, cancel);
             await SaveXml(xml, targetStream, cancel);
             return;
         }
 
         if (sourceEntry.IsWorkbookRelationships())
         {
-            var xml = await WorkbookRelationships.Patch(sourceStream, cancel);
+            var xml = await WorkbookRelationshipPatcher.Patch(sourceStream, cancel);
             await SaveXml(xml, targetStream, cancel);
             return;
         }
 
         if (sourceEntry.IsWorkbookXml())
         {
-            var xml = await Workbook.Patch(sourceStream, cancel);
+            var xml = await WorkbookPatcher.Patch(sourceStream, cancel);
             await SaveXml(xml, targetStream, cancel);
             return;
         }
 
         if (sourceEntry.IsWorksheetXml())
         {
-            var xml = await Sheet.Patch(sourceStream, cancel);
+            var xml = await SheetPatcher.Patch(sourceStream, cancel);
             await SaveXml(xml, targetStream, cancel);
             return;
         }

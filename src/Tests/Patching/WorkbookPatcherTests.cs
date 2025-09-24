@@ -1,5 +1,5 @@
 [TestFixture]
-public class SheetTests
+public class WorkbookPatcherTests
 {
     [Test]
     public Task Patch()
@@ -35,7 +35,7 @@ public class SheetTests
               <pageMargins left="0.75" right="0.75" top="1" bottom="1" header="0.5" footer="0.5"/>
             </worksheet>
             """u8.ToArray());
-        var xml = Sheet.Patch(stream);
+        var xml = WorkbookPatcher.Patch(stream);
 
         return Verify(xml);
     }
