@@ -21,7 +21,7 @@ Example file formats that leverage System.IO.Packaging
 ## How it works
 
  * For an input package stream
- * Duplicate each entry with a consistent compression
+ * Duplicate each entry with a consistent compression and consistent order
  * Omit `package/services/metadata/core-properties/*.psmdcp` entries
  * For the relationships entry `_rels/.rels`
    * Modify the `Id` of each `Relationship` to be deterministic
@@ -29,8 +29,8 @@ Example file formats that leverage System.IO.Packaging
    * Order `Relationship`s by `Type`
  * For the relationships entry `xl/_rels/workbook.xml.rels`
    * Order `Relationship`s by `Type`
- * For the relationships entry `xl/_rels/workbook.xml.rels`
-   * Remove the `created`, `lastModifiedBy`, and `modified` elements
+ * For the relationships entry `docProps/core.xml`
+   * Remove the `creator`, `created`, `lastModifiedBy`, and `modified` elements
 
 
 ## Usage
