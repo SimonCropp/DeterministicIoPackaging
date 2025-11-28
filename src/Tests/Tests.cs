@@ -74,7 +74,7 @@ public class Tests
         nupkg
     }
 
-    static string directory = AttributeReader.GetProjectDirectory();
+    static string directory = ProjectFiles.ProjectDirectory;
 
     static MemoryStream Convert(Extension extension)
     {
