@@ -71,7 +71,8 @@ public class Tests
     public enum Extension
     {
         xlsx,
-        nupkg
+        nupkg,
+        docx
     }
 
     static string directory = ProjectFiles.ProjectDirectory;

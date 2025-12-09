@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat:*)",
+      "Bash(unzip:*)",
+      "Bash(powershell:*)",
+      "Bash(dotnet run:*)",
+      "Bash(dotnet new:*)",
+      "Bash(Remove-Item -Path \"C:\\Code\\DeterministicIoPackaging\\temp\" -Recurse -Force)",
+      "Bash(dotnet build:*)",
+      "Bash(dotnet test:*)",
+      "Bash(find . -name \"*.received.*\" -exec bash -c 'mv \"\"$1\"\" \"\"${1/received/verified}\"\"' _ {} ;)"
+    ]
+  }
+}
