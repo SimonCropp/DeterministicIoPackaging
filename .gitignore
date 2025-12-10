@@ -8,3 +8,4 @@ obj/
 *.received.*
 nugets/
 src/Tests/~*
+.claude/settings.local.json
