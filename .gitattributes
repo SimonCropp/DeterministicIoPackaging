@@ -3,6 +3,7 @@
 *.png binary
 *.zip binary
 *.xlsx binary
+*.docx binary
 *.sha256 binary
 *.dll binary
 *.nupkg binary
