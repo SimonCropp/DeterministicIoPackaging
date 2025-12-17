@@ -14,6 +14,7 @@ public static partial class DeterministicPackage
         new CorePatcher(),
         new SheetRelationshipPatcher(),
         new DocumentRelationshipPatcher(),
+        new DocumentPatcher(),
         new NumberingPatcher()
     ];
 

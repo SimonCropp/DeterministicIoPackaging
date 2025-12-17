@@ -1,0 +1,14 @@
+﻿<numbering xmlns="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <abstractNum p2:abstractNumId="0" xmlns:p2="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    <p2:multiLevelType p2:val="hybridMultilevel" />
+  </abstractNum>
+  <abstractNum p2:abstractNumId="1" xmlns:p2="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    <p2:multiLevelType p2:val="hybridMultilevel" />
+  </abstractNum>
+  <num p2:numId="1" xmlns:p2="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    <p2:abstractNumId p2:val="1" />
+  </num>
+  <num p2:numId="2" xmlns:p2="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    <p2:abstractNumId p2:val="0" />
+  </num>
+</numbering>

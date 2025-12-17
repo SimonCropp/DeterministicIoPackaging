@@ -27,6 +27,29 @@ public class Tests
 
         return Verify(stream, extension: "xlsx");
     }
+    [Test]
+    public Task Numbering()
+    {
+        var file = Path.Combine(directory, "samples.numbering1.docx");
+        var stream = Convert(file);
+
+        return Verify(stream,extension: "docx");
+    }
+
+    [Test]
+    public void NumberingBinaryEquality()
+    {
+        var file1 = Path.Combine(directory, "samples.numbering1.docx");
+        var file2 = Path.Combine(directory, "samples.numbering2.docx");
+
+        var stream1 = Convert(file1);
+        var stream2 = Convert(file2);
+
+        var bytes1 = stream1.ToArray();
+        var bytes2 = stream2.ToArray();
+
+        Assert.That(bytes1, Is.EqualTo(bytes2));
+    }
 
     [Test]
     public Task WithWorkbookRels()
