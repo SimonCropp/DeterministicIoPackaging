@@ -13,7 +13,9 @@ public static partial class DeterministicPackage
         new WorkbookRelationshipPatcher(),
         new CorePatcher(),
         new SheetRelationshipPatcher(),
-        new DocumentRelationshipPatcher()
+        new DocumentRelationshipPatcher(),
+        new DocumentPatcher(),
+        new NumberingPatcher()
     ];
 
     static Archive CreateArchive(Stream target) => new(target, ZipArchiveMode.Create, leaveOpen: true);

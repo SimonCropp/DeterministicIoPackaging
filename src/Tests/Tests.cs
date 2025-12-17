@@ -18,13 +18,37 @@ public class Tests
 
         return VerifyZip(stream);
     }
+
     [Test]
     public Task AbsPath()
     {
         var file = Path.Combine(directory, "sample.WithAbsPath.xlsx");
         var stream = Convert(file);
 
-        return Verify(stream,extension: "xlsx");
+        return Verify(stream, extension: "xlsx");
+    }
+    [Test]
+    public Task Numbering()
+    {
+        var file = Path.Combine(directory, "samples.numbering1.docx");
+        var stream = Convert(file);
+
+        return Verify(stream,extension: "docx");
+    }
+
+    [Test]
+    public void NumberingBinaryEquality()
+    {
+        var file1 = Path.Combine(directory, "samples.numbering1.docx");
+        var file2 = Path.Combine(directory, "samples.numbering2.docx");
+
+        var stream1 = Convert(file1);
+        var stream2 = Convert(file2);
+
+        var bytes1 = stream1.ToArray();
+        var bytes2 = stream2.ToArray();
+
+        Assert.That(bytes1, Is.EqualTo(bytes2));
     }
 
     [Test]
@@ -33,7 +57,7 @@ public class Tests
         var file = Path.Combine(directory, "sample.WithWorkbookRels.xlsx");
         var stream = Convert(file);
 
-        return Verify(stream,extension: "xlsx");
+        return Verify(stream, extension: "xlsx");
     }
 
     [Test]

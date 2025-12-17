@@ -22,7 +22,7 @@ public static partial class DeterministicPackage
     {
         using var sourceArchive = ReadArchive(source);
         using var targetArchive = CreateArchive(target);
-        foreach (var sourceEntry in OrderedEntries(sourceArchive))
+        foreach (var sourceEntry in sourceArchive.OrderedEntries())
         {
             DuplicateEntry(sourceEntry, targetArchive);
         }
