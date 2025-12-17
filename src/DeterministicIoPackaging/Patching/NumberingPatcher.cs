@@ -19,25 +19,46 @@ class NumberingPatcher : IPatcher
             element.Remove();
         }
 
+        // Remove redundant namespace declarations from all descendants
+        // This normalizes elements that declare xmlns:p2="..." when the root already has the default namespace
+        RemoveRedundantNamespaceDeclarations(root);
+
         // Sort abstractNum elements by their content to ensure deterministic order
+        // First normalize the abstractNumId to a placeholder so sorting is consistent
         var abstractNums = root.Elements(abstractNum).ToList();
+
+        // Create a mapping from old abstractNumId to new abstractNumId (sorted index)
+        // We need to determine the sorted order first by comparing content excluding the ID
+        var idMapping = new Dictionary<string, string>();
+
+        // Temporarily set all abstractNumId to "0" for consistent sorting
+        var originalIds = new Dictionary<XElement, string>();
+        foreach (var element in abstractNums)
+        {
+            var attr = element.Attribute(w + "abstractNumId");
+            if (attr != null)
+            {
+                originalIds[element] = attr.Value;
+                attr.Value = "0";
+            }
+        }
+
+        // Now sort by content (which is now consistent since IDs are all "0")
         var sortedAbstractNums = abstractNums
             .OrderBy(_ => _.ToString())
             .ToList();
 
-        // Create a mapping from old abstractNumId to new abstractNumId
-        var idMapping = new Dictionary<string, string>();
-        for (var i = 0; i < abstractNums.Count; i++)
+        // Build the mapping: old ID -> new sorted index
+        for (var i = 0; i < sortedAbstractNums.Count; i++)
         {
-            var oldId = abstractNums[i].Attribute(w + "abstractNumId")?.Value;
-            var newId = i.ToString();
-            if (oldId != null)
+            var element = sortedAbstractNums[i];
+            if (originalIds.TryGetValue(element, out var oldId))
             {
-                idMapping[oldId] = newId;
+                idMapping[oldId] = i.ToString();
             }
         }
 
-        // Update abstractNumId attributes
+        // Update abstractNumId attributes to their new sorted index
         foreach (var (element, index) in sortedAbstractNums.Select((e, i) => (e, i)))
         {
             element.Attribute(w + "abstractNumId")!.Value = index.ToString();
@@ -58,6 +79,27 @@ class NumberingPatcher : IPatcher
                 {
                     abstractNumIdElement.Attribute(w + "val")!.Value = newId;
                 }
+            }
+        }
+    }
+
+    static void RemoveRedundantNamespaceDeclarations(XElement root)
+    {
+        // Get the default namespace from the root
+        var defaultNs = root.GetDefaultNamespace();
+
+        foreach (var element in root.DescendantsAndSelf())
+        {
+            // Find namespace attributes that declare the same URI as the default namespace
+            var redundantAttrs = element.Attributes()
+                .Where(a => a.IsNamespaceDeclaration &&
+                            a.Value == defaultNs.NamespaceName &&
+                            a.Name.LocalName != "xmlns") // Don't remove the default namespace declaration itself
+                .ToList();
+
+            foreach (var attr in redundantAttrs)
+            {
+                attr.Remove();
             }
         }
     }
