@@ -18,13 +18,14 @@ public class Tests
 
         return VerifyZip(stream);
     }
+
     [Test]
     public Task AbsPath()
     {
         var file = Path.Combine(directory, "sample.WithAbsPath.xlsx");
         var stream = Convert(file);
 
-        return Verify(stream,extension: "xlsx");
+        return Verify(stream, extension: "xlsx");
     }
 
     [Test]
@@ -33,7 +34,7 @@ public class Tests
         var file = Path.Combine(directory, "sample.WithWorkbookRels.xlsx");
         var stream = Convert(file);
 
-        return Verify(stream,extension: "xlsx");
+        return Verify(stream, extension: "xlsx");
     }
 
     [Test]
