@@ -12,6 +12,7 @@
     <PackageVersion Include="ProjectDefaults" Version="1.0.172" />
     <PackageVersion Include="ProjectFiles" Version="1.0.0" />
     <PackageVersion Include="System.IO.Compression" Version="4.3.0" />
+    <PackageVersion Include="System.IO.Hashing" Version="9.0.4" />
     <PackageVersion Include="System.Memory" Version="4.6.3" />
     <PackageVersion Include="System.Buffers" Version="4.6.1" />
     <PackageVersion Include="Verify" Version="31.13.2" />

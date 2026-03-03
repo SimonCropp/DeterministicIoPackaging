@@ -5,6 +5,7 @@
   <ItemGroup>
     <PackageReference Include="Polyfill" PrivateAssets="all" />
     <PackageReference Include="ProjectDefaults" PrivateAssets="all" />
+    <PackageReference Include="System.IO.Hashing" />
     <PackageReference Include="Microsoft.Sbom.Targets" PrivateAssets="all" Condition="'$(CI)' == 'true'" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net472' OR '$(TargetFramework)' == 'net48'">

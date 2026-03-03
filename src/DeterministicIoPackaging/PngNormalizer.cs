@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.IO.Hashing;
 
 namespace DeterministicIoPackaging;
 
@@ -23,7 +24,7 @@ static class PngNormalizer
 
     static void Normalize(byte[] data, int dataLength, Stream target)
     {
-        target.Write(pngSignature, 0, pngSignature.Length);
+        target.Write(pngSignature);
 
         var idatData = new MemoryStream();
         var preIdatChunks = new List<byte[]>();
@@ -66,7 +67,7 @@ static class PngNormalizer
 
         foreach (var chunk in preIdatChunks)
         {
-            target.Write(chunk, 0, chunk.Length);
+            target.Write(chunk);
         }
 
         if (idatData.Length > 0)
@@ -87,7 +88,7 @@ static class PngNormalizer
             {
                 using (var zlibStream = new ZLibStream(compressOutput, CompressionLevel.Optimal, leaveOpen: true))
                 {
-                    zlibStream.Write(decompressed, 0, decompressed.Length);
+                    zlibStream.Write(decompressed);
                 }
 
                 newIdatData = compressOutput.ToArray();
@@ -98,7 +99,7 @@ static class PngNormalizer
 
         foreach (var chunk in postIdatChunks)
         {
-            target.Write(chunk, 0, chunk.Length);
+            target.Write(chunk);
         }
     }
 
@@ -106,42 +107,15 @@ static class PngNormalizer
     {
         var header = new byte[4];
         BinaryPrimitives.WriteInt32BigEndian(header, data.Length);
-        target.Write(header, 0, 4);
-        target.Write(type, 0, 4);
-        target.Write(data, 0, data.Length);
+        target.Write(header);
+        target.Write(type);
+        target.Write(data);
 
-        var crc = 0xFFFFFFFF;
-        for (var i = 0; i < 4; i++)
-        {
-            crc = crc32Table[(crc ^ type[i]) & 0xFF] ^ (crc >> 8);
-        }
-
-        for (var i = 0; i < data.Length; i++)
-        {
-            crc = crc32Table[(crc ^ data[i]) & 0xFF] ^ (crc >> 8);
-        }
-
+        var crc = new Crc32();
+        crc.Append(type);
+        crc.Append(data);
         var crcBytes = new byte[4];
-        BinaryPrimitives.WriteUInt32BigEndian(crcBytes, crc ^ 0xFFFFFFFF);
-        target.Write(crcBytes, 0, 4);
-    }
-
-    static readonly uint[] crc32Table = GenerateCrc32Table();
-
-    static uint[] GenerateCrc32Table()
-    {
-        var table = new uint[256];
-        for (uint i = 0; i < 256; i++)
-        {
-            var crc = i;
-            for (var j = 0; j < 8; j++)
-            {
-                crc = (crc & 1) != 0 ? 0xEDB88320 ^ (crc >> 1) : crc >> 1;
-            }
-
-            table[i] = crc;
-        }
-
-        return table;
+        BinaryPrimitives.WriteUInt32BigEndian(crcBytes, crc.GetCurrentHashAsUInt32());
+        target.Write(crcBytes);
     }
 }

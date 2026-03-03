@@ -82,7 +82,7 @@ public class PngNormalizerTests
         {
             var entry = archive.CreateEntry("word/media/image1.png");
             using var entryStream = entry.Open();
-            entryStream.Write(png, 0, png.Length);
+            entryStream.Write(png);
         }
 
         zipSource.Position = 0;
@@ -94,7 +94,7 @@ public class PngNormalizerTests
         {
             var entry = archive.CreateEntry("word/media/image1.png");
             using var entryStream = entry.Open();
-            entryStream.Write(png2, 0, png2.Length);
+            entryStream.Write(png2);
         }
 
         zipSource2.Position = 0;
@@ -133,7 +133,7 @@ public class PngNormalizerTests
             var type = Encoding.ASCII.GetString(data, offset + 4, 4);
             var totalSize = 12 + length;
 
-            var expectedCrc = ComputeCrc32(data.AsSpan(offset + 4, 4 + length));
+            var expectedCrc = Crc32.HashToUInt32(data.AsSpan(offset + 4, 4 + length));
             var actualCrc = BinaryPrimitives.ReadUInt32BigEndian(data.AsSpan(offset + 8 + length));
             Assert.That(actualCrc, Is.EqualTo(expectedCrc), $"CRC mismatch for chunk {type}");
 
@@ -180,7 +180,7 @@ public class PngNormalizerTests
     static byte[] BuildPng(CompressionLevel level)
     {
         using var ms = new MemoryStream();
-        ms.Write(pngSignature, 0, pngSignature.Length);
+        ms.Write(pngSignature);
 
         var ihdrData = new byte[13];
         BinaryPrimitives.WriteInt32BigEndian(ihdrData.AsSpan(0), 2); // width
@@ -204,7 +204,7 @@ public class PngNormalizerTests
     static byte[] BuildPngWithSplitIdat()
     {
         using var ms = new MemoryStream();
-        ms.Write(pngSignature, 0, pngSignature.Length);
+        ms.Write(pngSignature);
 
         var ihdrData = new byte[13];
         BinaryPrimitives.WriteInt32BigEndian(ihdrData.AsSpan(0), 2);
@@ -231,7 +231,7 @@ public class PngNormalizerTests
     static byte[] BuildPngWithTextChunk(string keyword, string text)
     {
         using var ms = new MemoryStream();
-        ms.Write(pngSignature, 0, pngSignature.Length);
+        ms.Write(pngSignature);
 
         var ihdrData = new byte[13];
         BinaryPrimitives.WriteInt32BigEndian(ihdrData.AsSpan(0), 1);
@@ -259,7 +259,7 @@ public class PngNormalizerTests
         using var output = new MemoryStream();
         using (var zlib = new ZLibStream(output, level, leaveOpen: true))
         {
-            zlib.Write(data, 0, data.Length);
+            zlib.Write(data);
         }
 
         return output.ToArray();
@@ -269,59 +269,16 @@ public class PngNormalizerTests
     {
         var header = new byte[4];
         BinaryPrimitives.WriteInt32BigEndian(header, data.Length);
-        stream.Write(header, 0, 4);
-        stream.Write(type, 0, 4);
-        stream.Write(data, 0, data.Length);
+        stream.Write(header);
+        stream.Write(type);
+        stream.Write(data);
 
-        var crc = ComputeCrc32(type, data);
+        var crc = new Crc32();
+        crc.Append(type);
+        crc.Append(data);
         var crcBytes = new byte[4];
-        BinaryPrimitives.WriteUInt32BigEndian(crcBytes, crc);
-        stream.Write(crcBytes, 0, 4);
+        BinaryPrimitives.WriteUInt32BigEndian(crcBytes, crc.GetCurrentHashAsUInt32());
+        stream.Write(crcBytes);
     }
 
-    static uint ComputeCrc32(ReadOnlySpan<byte> data)
-    {
-        var crc = 0xFFFFFFFF;
-        foreach (var b in data)
-        {
-            crc = crc32Table[(crc ^ b) & 0xFF] ^ (crc >> 8);
-        }
-
-        return crc ^ 0xFFFFFFFF;
-    }
-
-    static uint ComputeCrc32(byte[] type, byte[] data)
-    {
-        var crc = 0xFFFFFFFF;
-        foreach (var b in type)
-        {
-            crc = crc32Table[(crc ^ b) & 0xFF] ^ (crc >> 8);
-        }
-
-        foreach (var b in data)
-        {
-            crc = crc32Table[(crc ^ b) & 0xFF] ^ (crc >> 8);
-        }
-
-        return crc ^ 0xFFFFFFFF;
-    }
-
-    static readonly uint[] crc32Table = GenerateCrc32Table();
-
-    static uint[] GenerateCrc32Table()
-    {
-        var table = new uint[256];
-        for (uint i = 0; i < 256; i++)
-        {
-            var crc = i;
-            for (var j = 0; j < 8; j++)
-            {
-                crc = (crc & 1) != 0 ? 0xEDB88320 ^ (crc >> 1) : crc >> 1;
-            }
-
-            table[i] = crc;
-        }
-
-        return table;
-    }
 }

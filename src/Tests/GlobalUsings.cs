@@ -2,4 +2,5 @@
 global using DeterministicIoPackaging;
 global using System.Buffers.Binary;
 global using System.IO.Compression;
+global using System.IO.Hashing;
 global using Polyfills;
