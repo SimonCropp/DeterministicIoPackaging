@@ -1,5 +1,3 @@
-using System.Buffers.Binary;
-using System.IO.Compression;
 
 [TestFixture]
 public class PngNormalizerTests
@@ -242,9 +240,8 @@ public class PngNormalizerTests
         ihdrData[9] = 2;
         WriteChunk(ms, ihdrType, ihdrData);
 
-        var latin1 = Encoding.GetEncoding(28591);
-        var keywordBytes = latin1.GetBytes(keyword);
-        var textBytes = latin1.GetBytes(text);
+        var keywordBytes = Encoding.Latin1.GetBytes(keyword);
+        var textBytes = Encoding.Latin1.GetBytes(text);
         var textChunkData = new byte[keywordBytes.Length + 1 + textBytes.Length];
         keywordBytes.CopyTo(textChunkData, 0);
         textChunkData[keywordBytes.Length] = 0;
