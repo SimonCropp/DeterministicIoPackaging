@@ -249,7 +249,7 @@ public class PngNormalizerTests
         WriteChunk(ms, textType, textChunkData);
 
         WriteChunk(ms, idatType, ZlibCompress([0, 255, 0, 0], CompressionLevel.Fastest));
-        WriteChunk(ms, iendType, Array.Empty<byte>());
+        WriteChunk(ms, iendType, []);
 
         return ms.ToArray();
     }
@@ -280,5 +280,4 @@ public class PngNormalizerTests
         BinaryPrimitives.WriteUInt32BigEndian(crcBytes, crc.GetCurrentHashAsUInt32());
         stream.Write(crcBytes);
     }
-
 }
