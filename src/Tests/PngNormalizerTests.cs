@@ -179,15 +179,15 @@ public class PngNormalizerTests
 
     static byte[] BuildPng(CompressionLevel level)
     {
-        using var ms = new MemoryStream();
-        ms.Write(pngSignature);
+        using var stream = new MemoryStream();
+        stream.Write(pngSignature);
 
         var ihdrData = new byte[13];
         BinaryPrimitives.WriteInt32BigEndian(ihdrData.AsSpan(0), 2); // width
         BinaryPrimitives.WriteInt32BigEndian(ihdrData.AsSpan(4), 2); // height
         ihdrData[8] = 8; // bit depth
         ihdrData[9] = 2; // color type: RGB
-        WriteChunk(ms, ihdrType, ihdrData);
+        WriteChunk(stream, ihdrType, ihdrData);
 
         byte[] rawPixels =
         [
@@ -195,23 +195,23 @@ public class PngNormalizerTests
             0, 255, 0, 0, 255, 0, 0 // row 2: filter=0, red, red
         ];
 
-        WriteChunk(ms, idatType, ZlibCompress(rawPixels, level));
-        WriteChunk(ms, iendType, Array.Empty<byte>());
+        WriteChunk(stream, idatType, ZlibCompress(rawPixels, level));
+        WriteChunk(stream, iendType, Array.Empty<byte>());
 
-        return ms.ToArray();
+        return stream.ToArray();
     }
 
     static byte[] BuildPngWithSplitIdat()
     {
-        using var ms = new MemoryStream();
-        ms.Write(pngSignature);
+        using var stream = new MemoryStream();
+        stream.Write(pngSignature);
 
         var ihdrData = new byte[13];
         BinaryPrimitives.WriteInt32BigEndian(ihdrData.AsSpan(0), 2);
         BinaryPrimitives.WriteInt32BigEndian(ihdrData.AsSpan(4), 2);
         ihdrData[8] = 8;
         ihdrData[9] = 2;
-        WriteChunk(ms, ihdrType, ihdrData);
+        WriteChunk(stream, ihdrType, ihdrData);
 
         byte[] rawPixels =
         [
@@ -221,24 +221,24 @@ public class PngNormalizerTests
 
         var zlibData = ZlibCompress(rawPixels, CompressionLevel.Fastest);
         var mid = zlibData.Length / 2;
-        WriteChunk(ms, idatType, zlibData.AsSpan(0, mid).ToArray());
-        WriteChunk(ms, idatType, zlibData.AsSpan(mid).ToArray());
-        WriteChunk(ms, iendType, Array.Empty<byte>());
+        WriteChunk(stream, idatType, zlibData.AsSpan(0, mid).ToArray());
+        WriteChunk(stream, idatType, zlibData.AsSpan(mid).ToArray());
+        WriteChunk(stream, iendType, Array.Empty<byte>());
 
-        return ms.ToArray();
+        return stream.ToArray();
     }
 
     static byte[] BuildPngWithTextChunk(string keyword, string text)
     {
-        using var ms = new MemoryStream();
-        ms.Write(pngSignature);
+        using var stream = new MemoryStream();
+        stream.Write(pngSignature);
 
         var ihdrData = new byte[13];
         BinaryPrimitives.WriteInt32BigEndian(ihdrData.AsSpan(0), 1);
         BinaryPrimitives.WriteInt32BigEndian(ihdrData.AsSpan(4), 1);
         ihdrData[8] = 8;
         ihdrData[9] = 2;
-        WriteChunk(ms, ihdrType, ihdrData);
+        WriteChunk(stream, ihdrType, ihdrData);
 
         var keywordBytes = Encoding.Latin1.GetBytes(keyword);
         var textBytes = Encoding.Latin1.GetBytes(text);
@@ -246,12 +246,12 @@ public class PngNormalizerTests
         keywordBytes.CopyTo(textChunkData, 0);
         textChunkData[keywordBytes.Length] = 0;
         textBytes.CopyTo(textChunkData, keywordBytes.Length + 1);
-        WriteChunk(ms, textType, textChunkData);
+        WriteChunk(stream, textType, textChunkData);
 
-        WriteChunk(ms, idatType, ZlibCompress([0, 255, 0, 0], CompressionLevel.Fastest));
-        WriteChunk(ms, iendType, []);
+        WriteChunk(stream, idatType, ZlibCompress([0, 255, 0, 0], CompressionLevel.Fastest));
+        WriteChunk(stream, iendType, []);
 
-        return ms.ToArray();
+        return stream.ToArray();
     }
 
     static byte[] ZlibCompress(byte[] data, CompressionLevel level)

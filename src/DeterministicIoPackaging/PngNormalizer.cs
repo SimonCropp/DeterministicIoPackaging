@@ -72,7 +72,7 @@ static class PngNormalizer
             if (!flushedIdat && idatData.Length > 0)
             {
                 flushedIdat = true;
-                WriteNormalizedIdat(target, idatData);
+                WriteNormalizedIdat(target, idatData.GetBuffer(), (int) idatData.Length);
             }
 
             target.Write(header);
@@ -82,44 +82,31 @@ static class PngNormalizer
         return isIend;
     }
 
-    static void WriteNormalizedIdat(Stream target, MemoryStream idatData)
+    static void WriteNormalizedIdat(Stream target, byte[] zlibBytes, int zlibLength)
     {
-        var zlibBytes = idatData.ToArray();
-
-        byte[] decompressed;
-        using (var zlibInput = new MemoryStream(zlibBytes))
+        using var decompressedStream = new MemoryStream();
+        using (var zlibInput = new MemoryStream(zlibBytes, 0, zlibLength))
         using (var zlibStream = new ZLibStream(zlibInput, CompressionMode.Decompress))
-        using (var decompressedStream = new MemoryStream())
         {
             zlibStream.CopyTo(decompressedStream);
-            decompressed = decompressedStream.ToArray();
         }
 
-        byte[] newIdatData;
-        using (var compressOutput = new MemoryStream())
+        using var compressOutput = new MemoryStream();
+        using (var zlibStream = new ZLibStream(compressOutput, CompressionLevel.Optimal, leaveOpen: true))
         {
-            using (var zlibStream = new ZLibStream(compressOutput, CompressionLevel.Optimal, leaveOpen: true))
-            {
-                zlibStream.Write(decompressed);
-            }
-
-            newIdatData = compressOutput.ToArray();
+            zlibStream.Write(decompressedStream.GetBuffer(), 0, (int) decompressedStream.Length);
         }
 
-        WriteChunk(target, idatType, newIdatData);
-    }
-
-    static void WriteChunk(Stream target, byte[] type, byte[] data)
-    {
+        var length = (int) compressOutput.Length;
         var header = new byte[4];
-        BinaryPrimitives.WriteInt32BigEndian(header, data.Length);
+        BinaryPrimitives.WriteInt32BigEndian(header, length);
         target.Write(header);
-        target.Write(type);
-        target.Write(data);
+        target.Write(idatType);
+        target.Write(compressOutput.GetBuffer(), 0, length);
 
         var crc = new Crc32();
-        crc.Append(type);
-        crc.Append(data);
+        crc.Append(idatType);
+        crc.Append(compressOutput.GetBuffer().AsSpan(0, length));
         var crcBytes = new byte[4];
         BinaryPrimitives.WriteUInt32BigEndian(crcBytes, crc.GetCurrentHashAsUInt32());
         target.Write(crcBytes);
