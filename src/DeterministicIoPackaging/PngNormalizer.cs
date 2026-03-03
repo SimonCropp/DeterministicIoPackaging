@@ -10,97 +10,103 @@ static class PngNormalizer
 
     public static void Normalize(Stream source, Stream target)
     {
-        using var buffer = new MemoryStream();
-        source.CopyTo(buffer);
-        Normalize(buffer.GetBuffer(), (int) buffer.Length, target);
+        var header = new byte[8];
+        source.ReadExactly(header, 0, 8);
+        target.Write(pngSignature);
+
+        using var idatData = new MemoryStream();
+        var flushedIdat = false;
+
+        while (true)
+        {
+            source.ReadExactly(header, 0, 8);
+            var chunkLength = BinaryPrimitives.ReadInt32BigEndian(header.AsSpan(0, 4));
+
+            var body = new byte[chunkLength + 4];
+            source.ReadExactly(body, 0, body.Length);
+
+            if (ProcessChunk(header, body, chunkLength, target, idatData, ref flushedIdat))
+            {
+                break;
+            }
+        }
     }
 
     public static async Task NormalizeAsync(Stream source, Stream target, Cancel cancel)
     {
-        using var buffer = new MemoryStream();
-        await source.CopyToAsync(buffer, cancel);
-        Normalize(buffer.GetBuffer(), (int) buffer.Length, target);
-    }
-
-    static void Normalize(byte[] data, int dataLength, Stream target)
-    {
+        var header = new byte[8];
+        await source.ReadExactlyAsync(header, 0, 8, cancel);
         target.Write(pngSignature);
 
-        var idatData = new MemoryStream();
-        var preIdatChunks = new List<byte[]>();
-        var postIdatChunks = new List<byte[]>();
-        var seenIdat = false;
-        var offset = 8;
+        using var idatData = new MemoryStream();
+        var flushedIdat = false;
 
-        while (offset + 12 <= dataLength)
+        while (true)
         {
-            var chunkLength = BinaryPrimitives.ReadInt32BigEndian(data.AsSpan(offset));
-            var totalChunkSize = 4 + 4 + chunkLength + 4;
+            await source.ReadExactlyAsync(header, 0, 8, cancel);
+            var chunkLength = BinaryPrimitives.ReadInt32BigEndian(header.AsSpan(0, 4));
 
-            var isIdat = data[offset + 4] == 'I' &&
-                         data[offset + 5] == 'D' &&
-                         data[offset + 6] == 'A' &&
-                         data[offset + 7] == 'T';
+            var body = new byte[chunkLength + 4];
+            await source.ReadExactlyAsync(body, 0, body.Length, cancel);
 
-            if (isIdat)
+            if (ProcessChunk(header, body, chunkLength, target, idatData, ref flushedIdat))
             {
-                seenIdat = true;
-                idatData.Write(data, offset + 8, chunkLength);
+                break;
             }
-            else
-            {
-                var rawChunk = new byte[totalChunkSize];
-                Buffer.BlockCopy(data, offset, rawChunk, 0, totalChunkSize);
-
-                if (seenIdat)
-                {
-                    postIdatChunks.Add(rawChunk);
-                }
-                else
-                {
-                    preIdatChunks.Add(rawChunk);
-                }
-            }
-
-            offset += totalChunkSize;
         }
+    }
 
-        foreach (var chunk in preIdatChunks)
+    static bool ProcessChunk(byte[] header, byte[] body, int chunkLength, Stream target, MemoryStream idatData, ref bool flushedIdat)
+    {
+        var isIdat = header[4] == 'I' && header[5] == 'D' &&
+                     header[6] == 'A' && header[7] == 'T';
+        var isIend = header[4] == 'I' && header[5] == 'E' &&
+                     header[6] == 'N' && header[7] == 'D';
+
+        if (isIdat)
         {
-            target.Write(chunk);
+            idatData.Write(body, 0, chunkLength);
         }
-
-        if (idatData.Length > 0)
+        else
         {
-            var zlibBytes = idatData.ToArray();
-
-            byte[] decompressed;
-            using (var zlibInput = new MemoryStream(zlibBytes))
-            using (var zlibStream = new ZLibStream(zlibInput, CompressionMode.Decompress))
-            using (var decompressedStream = new MemoryStream())
+            if (!flushedIdat && idatData.Length > 0)
             {
-                zlibStream.CopyTo(decompressedStream);
-                decompressed = decompressedStream.ToArray();
+                flushedIdat = true;
+                WriteNormalizedIdat(target, idatData);
             }
 
-            byte[] newIdatData;
-            using (var compressOutput = new MemoryStream())
-            {
-                using (var zlibStream = new ZLibStream(compressOutput, CompressionLevel.Optimal, leaveOpen: true))
-                {
-                    zlibStream.Write(decompressed);
-                }
+            target.Write(header);
+            target.Write(body);
+        }
 
-                newIdatData = compressOutput.ToArray();
+        return isIend;
+    }
+
+    static void WriteNormalizedIdat(Stream target, MemoryStream idatData)
+    {
+        var zlibBytes = idatData.ToArray();
+
+        byte[] decompressed;
+        using (var zlibInput = new MemoryStream(zlibBytes))
+        using (var zlibStream = new ZLibStream(zlibInput, CompressionMode.Decompress))
+        using (var decompressedStream = new MemoryStream())
+        {
+            zlibStream.CopyTo(decompressedStream);
+            decompressed = decompressedStream.ToArray();
+        }
+
+        byte[] newIdatData;
+        using (var compressOutput = new MemoryStream())
+        {
+            using (var zlibStream = new ZLibStream(compressOutput, CompressionLevel.Optimal, leaveOpen: true))
+            {
+                zlibStream.Write(decompressed);
             }
 
-            WriteChunk(target, idatType, newIdatData);
+            newIdatData = compressOutput.ToArray();
         }
 
-        foreach (var chunk in postIdatChunks)
-        {
-            target.Write(chunk);
-        }
+        WriteChunk(target, idatType, newIdatData);
     }
 
     static void WriteChunk(Stream target, byte[] type, byte[] data)
