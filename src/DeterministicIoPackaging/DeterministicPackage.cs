@@ -54,6 +54,12 @@ public static partial class DeterministicPackage
             return;
         }
 
+        if (sourceEntry.FullName.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+        {
+            PngNormalizer.Normalize(sourceStream, targetStream);
+            return;
+        }
+
         sourceStream.CopyTo(targetStream);
     }
 
@@ -77,6 +83,12 @@ public static partial class DeterministicPackage
             var xml = await XDocument.LoadAsync(sourceStream, LoadOptions.None, cancel);
             patcher.PatchXml(xml);
             await SaveXml(xml, targetStream, cancel);
+            return;
+        }
+
+        if (sourceEntry.FullName.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+        {
+            await PngNormalizer.NormalizeAsync(sourceStream, targetStream, cancel);
             return;
         }
 

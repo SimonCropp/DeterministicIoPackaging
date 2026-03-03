@@ -42,22 +42,38 @@ public class Tests
         var file1 = Path.Combine(directory, "samples.numbering1_1.docx");
         var file2 = Path.Combine(directory, "samples.numbering1_2.docx");
 
-        var stream1 = Convert(file1);
-        var stream2 = Convert(file2);
+        using var stream1 = Convert(file1);
+        using var stream2 = Convert(file2);
 
         var bytes1 = stream1.ToArray();
         var bytes2 = stream2.ToArray();
 
         Assert.That(bytes1, Is.EqualTo(bytes2));
     }
+
     [Test]
     public void NumberingBinaryEquality2()
     {
         var file1 = Path.Combine(directory, "samples.numbering2_1.docx");
         var file2 = Path.Combine(directory, "samples.numbering2_2.docx");
 
-        var stream1 = Convert(file1);
-        var stream2 = Convert(file2);
+        using var stream1 = Convert(file1);
+        using var stream2 = Convert(file2);
+
+        var bytes1 = stream1.ToArray();
+        var bytes2 = stream2.ToArray();
+
+        Assert.That(bytes1, Is.EqualTo(bytes2));
+    }
+
+    [Test]
+    public void PngImageBinaryEquality()
+    {
+        var file1 = Path.Combine(directory, "samples.pngImage_1.docx");
+        var file2 = Path.Combine(directory, "samples.pngImage_2.docx");
+
+        using var stream1 = Convert(file1);
+        using var stream2 = Convert(file2);
 
         var bytes1 = stream1.ToArray();
         var bytes2 = stream2.ToArray();
