@@ -1,3 +1,6 @@
+#if NET10_0_OR_GREATER
+
+using System.Buffers.Binary;
 using System.IO.Compression;
 
 [TestFixture]
@@ -83,24 +86,23 @@ public class PngNormalizerTests
         {
             var entry = archive.CreateEntry("word/media/image1.png");
             using var entryStream = entry.Open();
-            entryStream.Write(png, 0, png.Length);
+            entryStream.Write(png);
         }
 
         zipSource.Position = 0;
-        var result1 = DeterministicPackage.Convert(zipSource);
+        using var result1 = DeterministicPackage.Convert(zipSource);
 
-        // rebuild with different compression
         var png2 = BuildPng(CompressionLevel.Optimal);
         using var zipSource2 = new MemoryStream();
         using (var archive = new Archive(zipSource2, ZipArchiveMode.Create, leaveOpen: true))
         {
             var entry = archive.CreateEntry("word/media/image1.png");
             using var entryStream = entry.Open();
-            entryStream.Write(png2, 0, png2.Length);
+            entryStream.Write(png2);
         }
 
         zipSource2.Position = 0;
-        var result2 = DeterministicPackage.Convert(zipSource2);
+        using var result2 = DeterministicPackage.Convert(zipSource2);
 
         Assert.That(result1.ToArray(), Is.EqualTo(result2.ToArray()));
     }
@@ -113,17 +115,13 @@ public class PngNormalizerTests
         return target.ToArray();
     }
 
-    static readonly byte[] expectedSignature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+    static readonly byte[] pngSignature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
 
     static void AssertValidPng(byte[] data)
     {
         Assert.That(data.Length, Is.GreaterThanOrEqualTo(8));
+        Assert.That(data[..8], Is.EqualTo(pngSignature));
 
-        var header = new byte[8];
-        Array.Copy(data, 0, header, 0, 8);
-        Assert.That(header, Is.EqualTo(expectedSignature));
-
-        // Walk chunks, verify CRCs
         var offset = 8;
         var foundIhdr = false;
         var foundIdat = false;
@@ -131,28 +129,25 @@ public class PngNormalizerTests
 
         while (offset + 12 <= data.Length)
         {
-            var length = ReadInt32BigEndian(data, offset);
+            var length = BinaryPrimitives.ReadInt32BigEndian(data.AsSpan(offset));
             var type = Encoding.ASCII.GetString(data, offset + 4, 4);
             var totalSize = 12 + length;
 
-            // Verify CRC over type + data
-            var expectedCrc = ComputeCrc32(data, offset + 4, 4 + length);
-            var actualCrc = ReadUInt32BigEndian(data, offset + 8 + length);
+            var expectedCrc = ComputeCrc32(data.AsSpan(offset + 4, 4 + length));
+            var actualCrc = BinaryPrimitives.ReadUInt32BigEndian(data.AsSpan(offset + 8 + length));
             Assert.That(actualCrc, Is.EqualTo(expectedCrc), $"CRC mismatch for chunk {type}");
 
-            if (type == "IHDR")
+            switch (type)
             {
-                foundIhdr = true;
-            }
-
-            if (type == "IDAT")
-            {
-                foundIdat = true;
-            }
-
-            if (type == "IEND")
-            {
-                foundIend = true;
+                case "IHDR":
+                    foundIhdr = true;
+                    break;
+                case "IDAT":
+                    foundIdat = true;
+                    break;
+                case "IEND":
+                    foundIend = true;
+                    break;
             }
 
             offset += totalSize;
@@ -168,14 +163,12 @@ public class PngNormalizerTests
         var offset = 8;
         while (offset + 12 <= data.Length)
         {
-            var length = ReadInt32BigEndian(data, offset);
+            var length = BinaryPrimitives.ReadInt32BigEndian(data.AsSpan(offset));
             var type = Encoding.ASCII.GetString(data, offset + 4, 4);
 
             if (type == chunkType)
             {
-                var chunkData = new byte[length];
-                Array.Copy(data, offset + 8, chunkData, 0, length);
-                return chunkData;
+                return data[(offset + 8)..(offset + 8 + length)];
             }
 
             offset += 12 + length;
@@ -184,70 +177,53 @@ public class PngNormalizerTests
         return null;
     }
 
-    static readonly byte[] pngSignature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
-
-    // Build a minimal 2x2 red PNG with the given compression level
     static byte[] BuildPng(CompressionLevel level)
     {
         using var ms = new MemoryStream();
+        ms.Write(pngSignature);
 
-        ms.Write(pngSignature, 0, pngSignature.Length);
-
-        // IHDR: 2x2, 8-bit RGB
         var ihdrData = new byte[13];
-        WriteInt32BigEndian(ihdrData, 0, 2); // width
-        WriteInt32BigEndian(ihdrData, 4, 2); // height
+        BinaryPrimitives.WriteInt32BigEndian(ihdrData.AsSpan(0), 2); // width
+        BinaryPrimitives.WriteInt32BigEndian(ihdrData.AsSpan(4), 2); // height
         ihdrData[8] = 8; // bit depth
         ihdrData[9] = 2; // color type: RGB
-        WriteChunk(ms, "IHDR", ihdrData);
+        WriteChunk(ms, "IHDR"u8, ihdrData);
 
-        // Pixel data: 2 rows, each with filter byte (0) + 3 bytes per pixel * 2 pixels
-        var rawPixels = new byte[]
-        {
+        byte[] rawPixels =
+        [
             0, 255, 0, 0, 255, 0, 0, // row 1: filter=0, red, red
             0, 255, 0, 0, 255, 0, 0 // row 2: filter=0, red, red
-        };
+        ];
 
-        var zlibData = ZlibCompress(rawPixels, level);
-        WriteChunk(ms, "IDAT", zlibData);
-
-        WriteChunk(ms, "IEND", Array.Empty<byte>());
+        WriteChunk(ms, "IDAT"u8, ZlibCompress(rawPixels, level));
+        WriteChunk(ms, "IEND"u8, []);
 
         return ms.ToArray();
     }
 
-    // Build a PNG with IDAT data split across multiple chunks
     static byte[] BuildPngWithSplitIdat()
     {
         using var ms = new MemoryStream();
-
-        ms.Write(pngSignature, 0, pngSignature.Length);
+        ms.Write(pngSignature);
 
         var ihdrData = new byte[13];
-        WriteInt32BigEndian(ihdrData, 0, 2);
-        WriteInt32BigEndian(ihdrData, 4, 2);
+        BinaryPrimitives.WriteInt32BigEndian(ihdrData.AsSpan(0), 2);
+        BinaryPrimitives.WriteInt32BigEndian(ihdrData.AsSpan(4), 2);
         ihdrData[8] = 8;
         ihdrData[9] = 2;
-        WriteChunk(ms, "IHDR", ihdrData);
+        WriteChunk(ms, "IHDR"u8, ihdrData);
 
-        var rawPixels = new byte[]
-        {
+        byte[] rawPixels =
+        [
             0, 255, 0, 0, 255, 0, 0,
             0, 255, 0, 0, 255, 0, 0
-        };
+        ];
 
         var zlibData = ZlibCompress(rawPixels, CompressionLevel.Fastest);
-
-        // Split into two IDAT chunks
         var mid = zlibData.Length / 2;
-        var firstHalf = new byte[mid];
-        var secondHalf = new byte[zlibData.Length - mid];
-        Array.Copy(zlibData, 0, firstHalf, 0, mid);
-        Array.Copy(zlibData, mid, secondHalf, 0, zlibData.Length - mid);
-        WriteChunk(ms, "IDAT", firstHalf);
-        WriteChunk(ms, "IDAT", secondHalf);
-
-        WriteChunk(ms, "IEND", Array.Empty<byte>());
+        WriteChunk(ms, "IDAT"u8, zlibData[..mid]);
+        WriteChunk(ms, "IDAT"u8, zlibData[mid..]);
+        WriteChunk(ms, "IEND"u8, []);
 
         return ms.ToArray();
     }
@@ -255,34 +231,25 @@ public class PngNormalizerTests
     static byte[] BuildPngWithTextChunk(string keyword, string text)
     {
         using var ms = new MemoryStream();
-
-        ms.Write(pngSignature, 0, pngSignature.Length);
+        ms.Write(pngSignature);
 
         var ihdrData = new byte[13];
-        WriteInt32BigEndian(ihdrData, 0, 1);
-        WriteInt32BigEndian(ihdrData, 4, 1);
+        BinaryPrimitives.WriteInt32BigEndian(ihdrData.AsSpan(0), 1);
+        BinaryPrimitives.WriteInt32BigEndian(ihdrData.AsSpan(4), 1);
         ihdrData[8] = 8;
         ihdrData[9] = 2;
-        WriteChunk(ms, "IHDR", ihdrData);
+        WriteChunk(ms, "IHDR"u8, ihdrData);
 
-        // tEXt chunk: keyword + null separator + text
-        var keywordBytes = Encoding.ASCII.GetBytes(keyword);
-        var textBytes = Encoding.ASCII.GetBytes(text);
+        var keywordBytes = Encoding.Latin1.GetBytes(keyword);
+        var textBytes = Encoding.Latin1.GetBytes(text);
         var textChunkData = new byte[keywordBytes.Length + 1 + textBytes.Length];
-        Array.Copy(keywordBytes, textChunkData, keywordBytes.Length);
+        keywordBytes.CopyTo(textChunkData, 0);
         textChunkData[keywordBytes.Length] = 0;
-        Array.Copy(textBytes, 0, textChunkData, keywordBytes.Length + 1, textBytes.Length);
-        WriteChunk(ms, "tEXt", textChunkData);
+        textBytes.CopyTo(textChunkData, keywordBytes.Length + 1);
+        WriteChunk(ms, "tEXt"u8, textChunkData);
 
-        var rawPixels = new byte[]
-        {
-            0, 255, 0, 0 // 1x1 RGB: filter=0, red
-        };
-
-        var zlibData = ZlibCompress(rawPixels, CompressionLevel.Fastest);
-        WriteChunk(ms, "IDAT", zlibData);
-
-        WriteChunk(ms, "IEND", Array.Empty<byte>());
+        WriteChunk(ms, "IDAT"u8, ZlibCompress([0, 255, 0, 0], CompressionLevel.Fastest));
+        WriteChunk(ms, "IEND"u8, []);
 
         return ms.ToArray();
     }
@@ -290,78 +257,50 @@ public class PngNormalizerTests
     static byte[] ZlibCompress(byte[] data, CompressionLevel level)
     {
         using var output = new MemoryStream();
-        output.WriteByte(0x78);
-        output.WriteByte(0x9C);
-
-        using (var deflate = new DeflateStream(output, level, leaveOpen: true))
+        using (var zlib = new ZLibStream(output, level, leaveOpen: true))
         {
-            deflate.Write(data, 0, data.Length);
+            zlib.Write(data);
         }
-
-        // Adler-32
-        uint a = 1, b = 0;
-        foreach (var val in data)
-        {
-            a = (a + val) % 65521;
-            b = (b + a) % 65521;
-        }
-
-        var adler = (b << 16) | a;
-        output.WriteByte((byte) (adler >> 24));
-        output.WriteByte((byte) (adler >> 16));
-        output.WriteByte((byte) (adler >> 8));
-        output.WriteByte((byte) adler);
 
         return output.ToArray();
     }
 
-    static void WriteChunk(Stream stream, string type, byte[] data)
+    static void WriteChunk(Stream stream, ReadOnlySpan<byte> type, byte[] data)
     {
-        var lengthBytes = new byte[4];
-        WriteInt32BigEndian(lengthBytes, 0, data.Length);
-        stream.Write(lengthBytes, 0, 4);
+        Span<byte> header = stackalloc byte[4];
+        BinaryPrimitives.WriteInt32BigEndian(header, data.Length);
+        stream.Write(header);
+        stream.Write(type);
+        stream.Write(data);
 
-        var typeBytes = Encoding.ASCII.GetBytes(type);
-        stream.Write(typeBytes, 0, 4);
-        stream.Write(data, 0, data.Length);
-
-        var typeAndData = new byte[4 + data.Length];
-        Array.Copy(typeBytes, 0, typeAndData, 0, 4);
-        Array.Copy(data, 0, typeAndData, 4, data.Length);
-        var crc = ComputeCrc32(typeAndData, 0, typeAndData.Length);
-        var crcBytes = new byte[4];
-        WriteUInt32BigEndian(crcBytes, 0, crc);
-        stream.Write(crcBytes, 0, 4);
+        var crc = ComputeCrc32(type, data);
+        Span<byte> crcBytes = stackalloc byte[4];
+        BinaryPrimitives.WriteUInt32BigEndian(crcBytes, crc);
+        stream.Write(crcBytes);
     }
 
-    static int ReadInt32BigEndian(byte[] data, int offset) =>
-        (data[offset] << 24) | (data[offset + 1] << 16) | (data[offset + 2] << 8) | data[offset + 3];
-
-    static uint ReadUInt32BigEndian(byte[] data, int offset) =>
-        (uint) ((data[offset] << 24) | (data[offset + 1] << 16) | (data[offset + 2] << 8) | data[offset + 3]);
-
-    static void WriteInt32BigEndian(byte[] data, int offset, int value)
-    {
-        data[offset] = (byte) (value >> 24);
-        data[offset + 1] = (byte) (value >> 16);
-        data[offset + 2] = (byte) (value >> 8);
-        data[offset + 3] = (byte) value;
-    }
-
-    static void WriteUInt32BigEndian(byte[] data, int offset, uint value)
-    {
-        data[offset] = (byte) (value >> 24);
-        data[offset + 1] = (byte) (value >> 16);
-        data[offset + 2] = (byte) (value >> 8);
-        data[offset + 3] = (byte) value;
-    }
-
-    static uint ComputeCrc32(byte[] data, int offset, int length)
+    static uint ComputeCrc32(ReadOnlySpan<byte> data)
     {
         var crc = 0xFFFFFFFF;
-        for (var i = offset; i < offset + length; i++)
+        foreach (var b in data)
         {
-            crc = crc32Table[(crc ^ data[i]) & 0xFF] ^ (crc >> 8);
+            crc = crc32Table[(crc ^ b) & 0xFF] ^ (crc >> 8);
+        }
+
+        return crc ^ 0xFFFFFFFF;
+    }
+
+    static uint ComputeCrc32(ReadOnlySpan<byte> type, ReadOnlySpan<byte> data)
+    {
+        var crc = 0xFFFFFFFF;
+        foreach (var b in type)
+        {
+            crc = crc32Table[(crc ^ b) & 0xFF] ^ (crc >> 8);
+        }
+
+        foreach (var b in data)
+        {
+            crc = crc32Table[(crc ^ b) & 0xFF] ^ (crc >> 8);
         }
 
         return crc ^ 0xFFFFFFFF;
@@ -386,3 +325,5 @@ public class PngNormalizerTests
         return table;
     }
 }
+
+#endif
