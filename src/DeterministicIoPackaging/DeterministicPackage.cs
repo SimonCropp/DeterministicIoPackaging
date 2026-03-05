@@ -91,7 +91,7 @@ public static partial class DeterministicPackage
 
     static Entry CreateEntry(Entry source, Archive target)
     {
-        var entry = target.CreateEntry(source.FullName, CompressionLevel.Fastest);
+        var entry = target.CreateEntry(source.FullName, CompressionLevel.NoCompression);
         entry.LastWriteTime = StableDateOffset;
         return entry;
     }
