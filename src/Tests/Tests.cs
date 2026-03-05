@@ -122,6 +122,20 @@ public class Tests
         await Verify(stream, extension: extension.ToString());
     }
 
+    [Test]
+    public void AllEntriesAreStored([Values] Extension extension)
+    {
+        var stream = Convert(extension);
+        stream.Position = 0;
+        using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
+        foreach (var entry in archive.Entries)
+        {
+            // Verify compression method is Stored (0) by checking compressed == uncompressed
+            Assert.That(entry.CompressedLength, Is.EqualTo(entry.Length),
+                $"Entry '{entry.FullName}' is not stored (compressed={entry.CompressedLength}, uncompressed={entry.Length})");
+        }
+    }
+
     public enum Extension
     {
         xlsx,
