@@ -1,4 +1,4 @@
-class WorkbookPatcher : IPatcher
+class WorkbookPatcher(WorkbookRelationshipPatcher relsPatcher) : IPatcher
 {
     static XNamespace mc = "http://schemas.openxmlformats.org/markup-compatibility/2006";
     static XName alternateContent = mc + "AlternateContent";
@@ -12,6 +12,11 @@ class WorkbookPatcher : IPatcher
             .FirstOrDefault(_ => _.Descendants(abspath).Any());
 
         absPath?.Remove();
+
+        if (relsPatcher.IdMapping.Count > 0)
+        {
+            RelationshipRenumber.RemapIds(xml, relsPatcher.IdMapping);
+        }
     }
 
     public bool IsMatch(Entry entry) =>

@@ -1,4 +1,4 @@
-class DocumentPatcher : IPatcher
+class DocumentPatcher(DocumentRelationshipPatcher relsPatcher) : IPatcher
 {
     static XNamespace wp = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing";
     static XNamespace pic = "http://schemas.openxmlformats.org/drawingml/2006/picture";
@@ -22,6 +22,11 @@ class DocumentPatcher : IPatcher
         {
             // Use index + 1 for 1-based numbering (common in Office Open XML)
             elementsWithIds[i].Attribute("id")!.Value = (i + 1).ToString();
+        }
+
+        if (relsPatcher.IdMapping.Count > 0)
+        {
+            RelationshipRenumber.RemapIds(xml, relsPatcher.IdMapping);
         }
     }
 }
