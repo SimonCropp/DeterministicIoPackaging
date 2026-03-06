@@ -1,5 +1,4 @@
 using System.Buffers.Binary;
-using System.IO.Hashing;
 
 namespace DeterministicIoPackaging;
 
@@ -91,11 +90,43 @@ static class PngNormalizer
             zlibStream.CopyTo(decompressedStream);
         }
 
+        var raw = decompressedStream.GetBuffer();
+        var rawLength = (int) decompressedStream.Length;
+
+        // Write raw zlib stored format to avoid framework DEFLATE differences.
+        // Format: CMF(0x78) FLG(0x01) + DEFLATE stored blocks + Adler-32
         using var compressOutput = new MemoryStream();
-        using (var zlibStream = new ZLibStream(compressOutput, CompressionLevel.Optimal, leaveOpen: true))
+        compressOutput.WriteByte(0x78); // CMF: deflate, 32K window
+        compressOutput.WriteByte(0x01); // FLG: no dict, check bits make CMF*256+FLG divisible by 31
+
+        // Write DEFLATE stored blocks (max 65535 bytes each)
+        var offset = 0;
+        while (offset < rawLength)
         {
-            zlibStream.Write(decompressedStream.GetBuffer(), 0, (int) decompressedStream.Length);
+            var blockSize = Math.Min(rawLength - offset, 65535);
+            var isFinal = offset + blockSize >= rawLength;
+            compressOutput.WriteByte(isFinal ? (byte) 1 : (byte) 0); // BFINAL + BTYPE=00
+            compressOutput.WriteByte((byte) (blockSize & 0xFF));
+            compressOutput.WriteByte((byte) (blockSize >> 8));
+            compressOutput.WriteByte((byte) (~blockSize & 0xFF));
+            compressOutput.WriteByte((byte) ((~blockSize >> 8) & 0xFF));
+            compressOutput.Write(raw, offset, blockSize);
+            offset += blockSize;
         }
+
+        if (rawLength == 0)
+        {
+            // Empty data: single final stored block with length 0
+            compressOutput.WriteByte(1);
+            compressOutput.Write([0, 0, 0xFF, 0xFF], 0, 4);
+        }
+
+        // Adler-32 checksum
+        var adler = Adler32(raw, rawLength);
+        compressOutput.WriteByte((byte) (adler >> 24));
+        compressOutput.WriteByte((byte) (adler >> 16));
+        compressOutput.WriteByte((byte) (adler >> 8));
+        compressOutput.WriteByte((byte) adler);
 
         var length = (int) compressOutput.Length;
         var header = new byte[4];
@@ -110,5 +141,18 @@ static class PngNormalizer
         var crcBytes = new byte[4];
         BinaryPrimitives.WriteUInt32BigEndian(crcBytes, crc.GetCurrentHashAsUInt32());
         target.Write(crcBytes);
+    }
+
+    static uint Adler32(byte[] data, int length)
+    {
+        var a = 1u;
+        var b = 0u;
+        for (var i = 0; i < length; i++)
+        {
+            a = (a + data[i]) % 65521;
+            b = (b + a) % 65521;
+        }
+
+        return (b << 16) | a;
     }
 }

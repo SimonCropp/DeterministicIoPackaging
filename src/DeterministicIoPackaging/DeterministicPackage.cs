@@ -5,18 +5,24 @@ public static partial class DeterministicPackage
     public static DateTime StableDate { get; } = new(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     public static DateTimeOffset StableDateOffset { get; } = new(StableDate);
 
-    static IReadOnlyList<IPatcher> patchers =
-    [
-        new RelationshipPatcher(),
-        new SheetPatcher(),
-        new WorkbookPatcher(),
-        new WorkbookRelationshipPatcher(),
-        new CorePatcher(),
-        new SheetRelationshipPatcher(),
-        new DocumentRelationshipPatcher(),
-        new DocumentPatcher(),
-        new NumberingPatcher()
-    ];
+    static IReadOnlyList<IPatcher> CreatePatchers()
+    {
+        var workbookRelsPatcher = new WorkbookRelationshipPatcher();
+        var documentRelsPatcher = new DocumentRelationshipPatcher();
+        return
+        [
+            new ContentTypesPatcher(),
+            new RelationshipPatcher(),
+            new SheetPatcher(),
+            workbookRelsPatcher,
+            new WorkbookPatcher(workbookRelsPatcher),
+            new CorePatcher(),
+            new SheetRelationshipPatcher(),
+            documentRelsPatcher,
+            new DocumentPatcher(documentRelsPatcher),
+            new NumberingPatcher()
+        ];
+    }
 
     static Archive CreateArchive(Stream target) => new(target, ZipArchiveMode.Create, leaveOpen: true);
 
@@ -30,7 +36,7 @@ public static partial class DeterministicPackage
         return new(source, ZipArchiveMode.Read, leaveOpen: true);
     }
 
-    static void DuplicateEntry(Entry sourceEntry, Archive targetArchive)
+    static void DuplicateEntry(Entry sourceEntry, Archive targetArchive, IReadOnlyList<IPatcher> currentPatchers)
     {
         if (IsPsmdcp(sourceEntry))
         {
@@ -41,7 +47,7 @@ public static partial class DeterministicPackage
         var targetEntry = CreateEntry(sourceEntry, targetArchive);
         using var targetStream = targetEntry.Open();
 
-        foreach (var patcher in patchers)
+        foreach (var patcher in currentPatchers)
         {
             if (!patcher.IsMatch(sourceEntry))
             {
@@ -63,7 +69,7 @@ public static partial class DeterministicPackage
         sourceStream.CopyTo(targetStream);
     }
 
-    static async Task DuplicateEntryAsync(Entry sourceEntry, Archive targetArchive, Cancel cancel)
+    static async Task DuplicateEntryAsync(Entry sourceEntry, Archive targetArchive, IReadOnlyList<IPatcher> currentPatchers, Cancel cancel)
     {
         if (IsPsmdcp(sourceEntry))
         {
@@ -73,7 +79,7 @@ public static partial class DeterministicPackage
         using var sourceStream = await sourceEntry.OpenAsync(cancel);
         var targetEntry = CreateEntry(sourceEntry, targetArchive);
         using var targetStream = await targetEntry.OpenAsync(cancel);
-        foreach (var patcher in patchers)
+        foreach (var patcher in currentPatchers)
         {
             if (!patcher.IsMatch(sourceEntry))
             {

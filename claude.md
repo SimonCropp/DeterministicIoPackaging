@@ -43,12 +43,37 @@ The codebase uses a patcher pattern for normalizing OOXML content:
 - Each patcher implements `IPatcher` interface
 - `IsMatch(Entry entry)` - determines which files the patcher applies to (e.g., "word/document.xml")
 - `PatchXml(XDocument xml)` - modifies the XML in-place
-- Register patchers in `DeterministicPackage.cs` patchers list
-- **Order matters** - patchers run in sequence
+- Register patchers via `CreatePatchers()` factory in `DeterministicPackage.cs` (fresh instance per conversion)
+- **Order matters** - relationship patchers must run before their content patchers (e.g., `WorkbookRelationshipPatcher` before `WorkbookPatcher`)
+
+#### Paired Patchers
+
+Some patchers work in pairs: a relationship patcher renumbers IDs in `.rels` files and stores the mapping, then a content patcher remaps `r:id` references in the corresponding XML:
+
+- `WorkbookRelationshipPatcher` → `WorkbookPatcher` (xl/_rels/workbook.xml.rels → xl/workbook.xml)
+- `DocumentRelationshipPatcher` → `DocumentPatcher` (word/_rels/document.xml.rels → word/document.xml)
+
+The content patcher receives the relationship patcher via constructor injection.
+
+#### Relationship ID Renumbering
+
+`RelationshipRenumber` (in IPatcher.cs) provides shared helpers:
+- `RenumberAndSort(XDocument)` — sorts relationships by Type+Target, renumbers to `DeterministicId{n}`, returns old→new mapping
+- `RemapIds(XDocument, mapping)` — replaces `r:id` attribute values in content XML using the mapping
+
+#### Content Types Sorting
+
+`ContentTypesPatcher` sorts `[Content_Types].xml` elements by local name, then Extension, then PartName to ensure deterministic order across frameworks.
+
+### ZIP Output
+
+- `ZipStorer` rewrites ZIP archives with all entries using compression method 0 (Stored), bypassing net48's `ZipArchive` which ignores `CompressionLevel.NoCompression`
+- Entries are sorted by `FullName` using `StringComparer.Ordinal`
+- `PngNormalizer` writes raw zlib stored blocks (CMF+FLG + DEFLATE stored blocks + Adler-32) instead of using `ZLibStream`, which produces different output on net48 vs net10.0
 
 Example patcher structure:
 ```csharp
-class DocumentPatcher : IPatcher
+class DocumentPatcher(DocumentRelationshipPatcher relsPatcher) : IPatcher
 {
     static XNamespace wp = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing";
     static XNamespace pic = "http://schemas.openxmlformats.org/drawingml/2006/picture";
@@ -58,9 +83,12 @@ class DocumentPatcher : IPatcher
 
     public void PatchXml(XDocument xml)
     {
-        var root = xml.Root!;
-        var elements = root.Descendants(wp + "docPr").ToList();
-        // Normalize IDs...
+        // Normalize drawing IDs...
+        // Then remap relationship IDs
+        if (relsPatcher.IdMapping.Count > 0)
+        {
+            RelationshipRenumber.RemapIds(xml, relsPatcher.IdMapping);
+        }
     }
 }
 ```

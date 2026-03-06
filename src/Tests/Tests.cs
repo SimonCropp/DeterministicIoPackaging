@@ -127,12 +127,64 @@ public class Tests
     {
         var stream = Convert(extension);
         stream.Position = 0;
-        using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
+        using var archive = new Archive(stream, ZipArchiveMode.Read);
         foreach (var entry in archive.Entries)
         {
             // Verify compression method is Stored (0) by checking compressed == uncompressed
             Assert.That(entry.CompressedLength, Is.EqualTo(entry.Length),
                 $"Entry '{entry.FullName}' is not stored (compressed={entry.CompressedLength}, uncompressed={entry.Length})");
+        }
+    }
+
+    [Test]
+    public void RelationshipIdsAreDeterministic([Values] Extension extension)
+    {
+        var stream = Convert(extension);
+        stream.Position = 0;
+        using var archive = new Archive(stream, ZipArchiveMode.Read);
+        foreach (var entry in archive.Entries)
+        {
+            if (!entry.FullName.EndsWith(".rels"))
+            {
+                continue;
+            }
+
+            using var entryStream = entry.Open();
+            var xml = XDocument.Load(entryStream);
+            var ids = xml.Root!.Elements()
+                .Select(_ => _.Attribute("Id")?.Value)
+                .Where(_ => _ != null)
+                .ToList();
+
+            foreach (var id in ids)
+            {
+                Assert.That(id, Does.StartWith("DeterministicId"),
+                    $"Entry '{entry.FullName}' has non-deterministic relationship Id '{id}'");
+            }
+        }
+    }
+
+    [Test]
+    public void ContentTypesAreSorted([Values] Extension extension)
+    {
+        var stream = Convert(extension);
+        stream.Position = 0;
+        using var archive = new Archive(stream, ZipArchiveMode.Read);
+        var contentTypes = archive.GetEntry("[Content_Types].xml")!;
+        using var entryStream = contentTypes.Open();
+        var xml = XDocument.Load(entryStream);
+        var elements = xml.Root!.Elements().ToList();
+
+        var sorted = elements
+            .OrderBy(_ => _.Name.LocalName)
+            .ThenBy(_ => (string?)_.Attribute("Extension") ?? "")
+            .ThenBy(_ => (string?)_.Attribute("PartName") ?? "")
+            .ToList();
+
+        for (var i = 0; i < elements.Count; i++)
+        {
+            Assert.That(elements[i].ToString(), Is.EqualTo(sorted[i].ToString()),
+                $"[Content_Types].xml element at index {i} is not in sorted order");
         }
     }
 

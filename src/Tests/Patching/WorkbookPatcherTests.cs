@@ -36,7 +36,7 @@ public class WorkbookPatcherTests
             </worksheet>
             """;
 
-        var document = PatchHelper.Patch<WorkbookPatcher>(xml);
+        var document = PatchHelper.Patch(new WorkbookPatcher(new()), xml);
         return Verify(document);
     }
 }
