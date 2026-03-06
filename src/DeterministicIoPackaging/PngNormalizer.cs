@@ -119,7 +119,7 @@ static class PngNormalizer
         {
             // Empty data: single final stored block with length 0
             compressOutput.WriteByte(1);
-            compressOutput.Write(new byte[] { 0, 0, 0xFF, 0xFF }, 0, 4);
+            compressOutput.Write([0, 0, 0xFF, 0xFF], 0, 4);
         }
 
         // Adler-32 checksum

@@ -127,7 +127,7 @@ public class Tests
     {
         var stream = Convert(extension);
         stream.Position = 0;
-        using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
+        using var archive = new Archive(stream, ZipArchiveMode.Read);
         foreach (var entry in archive.Entries)
         {
             // Verify compression method is Stored (0) by checking compressed == uncompressed
@@ -141,7 +141,7 @@ public class Tests
     {
         var stream = Convert(extension);
         stream.Position = 0;
-        using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
+        using var archive = new Archive(stream, ZipArchiveMode.Read);
         foreach (var entry in archive.Entries)
         {
             if (!entry.FullName.EndsWith(".rels"))
@@ -169,7 +169,7 @@ public class Tests
     {
         var stream = Convert(extension);
         stream.Position = 0;
-        using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
+        using var archive = new Archive(stream, ZipArchiveMode.Read);
         var contentTypes = archive.GetEntry("[Content_Types].xml")!;
         using var entryStream = contentTypes.Open();
         var xml = XDocument.Load(entryStream);

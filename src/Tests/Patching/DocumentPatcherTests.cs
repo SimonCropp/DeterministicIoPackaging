@@ -70,7 +70,7 @@ public class DocumentPatcherTests
             </w:document>
             """;
 
-        var document = PatchHelper.Patch(new DocumentPatcher(new DocumentRelationshipPatcher()), xml);
+        var document = PatchHelper.Patch(new DocumentPatcher(new()), xml);
         return Verify(document);
     }
 }
