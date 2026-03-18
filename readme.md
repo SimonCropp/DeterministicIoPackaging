@@ -21,7 +21,7 @@ Example file formats that leverage System.IO.Packaging
 ## How it works
 
  * For an input package stream
- * Duplicate each entry with a consistent compression and consistent order
+ * Duplicate each entry with Deflate compression and consistent order
  * Omit `package/services/metadata/core-properties/*.psmdcp` entries
  * For the relationships entry `_rels/.rels`
    * Modify the `Id` of each `Relationship` to be deterministic
@@ -31,6 +31,20 @@ Example file formats that leverage System.IO.Packaging
    * Order `Relationship`s by `Type`
  * For the relationships entry `docProps/core.xml`
    * Remove the `creator`, `created`, `lastModifiedBy`, and `modified` elements
+
+
+### Binary output across .NET frameworks
+
+Binary output may differ between .NET Framework (net48) and .NET (net10.0+) due to differences in Deflate compression implementations. The XML content within entries is identical — only the compressed bytes differ.
+
+When snapshot-testing binary package output across multiple target frameworks using [Verify](https://github.com/VerifyTests/Verify), use `UniqueForRuntime` to generate framework-specific verified files:
+
+```cs
+await Verify(stream, extension: "xlsx")
+    .UniqueForRuntime();
+```
+
+See [Verify Naming docs](https://github.com/VerifyTests/Verify/blob/main/docs/naming.md) for more details.
 
 
 ## Usage
@@ -44,7 +58,7 @@ Example file formats that leverage System.IO.Packaging
 using var sourceStream = File.OpenRead(packagePath);
 await DeterministicPackage.ConvertAsync(sourceStream, targetStream);
 ```
-<sup><a href='/src/Tests/Tests.cs#L226-L231' title='Snippet source file'>snippet source</a> | <a href='#snippet-ConvertAsync' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/Tests/Tests.cs#L217-L222' title='Snippet source file'>snippet source</a> | <a href='#snippet-ConvertAsync' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 
@@ -56,7 +70,7 @@ await DeterministicPackage.ConvertAsync(sourceStream, targetStream);
 using var sourceStream = File.OpenRead(packagePath);
 await DeterministicPackage.ConvertAsync(sourceStream, targetStream);
 ```
-<sup><a href='/src/Tests/Tests.cs#L226-L231' title='Snippet source file'>snippet source</a> | <a href='#snippet-ConvertAsync' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/Tests/Tests.cs#L217-L222' title='Snippet source file'>snippet source</a> | <a href='#snippet-ConvertAsync' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 

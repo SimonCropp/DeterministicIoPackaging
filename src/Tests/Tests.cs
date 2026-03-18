@@ -25,7 +25,8 @@ public class Tests
         var file = Path.Combine(directory, "sample.WithAbsPath.xlsx");
         var stream = Convert(file);
 
-        return Verify(stream, extension: "xlsx");
+        return Verify(stream, extension: "xlsx")
+            .UniqueForRuntime();
     }
     [Test]
     public Task Numbering()
@@ -33,7 +34,8 @@ public class Tests
         var file = Path.Combine(directory, "samples.numbering1_1.docx");
         var stream = Convert(file);
 
-        return Verify(stream,extension: "docx");
+        return Verify(stream, extension: "docx")
+            .UniqueForRuntime();
     }
 
     [Test]
@@ -87,7 +89,8 @@ public class Tests
         var file = Path.Combine(directory, "sample.WithWorkbookRels.xlsx");
         var stream = Convert(file);
 
-        return Verify(stream, extension: "xlsx");
+        return Verify(stream, extension: "xlsx")
+            .UniqueForRuntime();
     }
 
     [Test]
@@ -111,7 +114,8 @@ public class Tests
     {
         var stream = Convert(extension);
 
-        return Verify(stream, extension: extension.ToString());
+        return Verify(stream, extension: extension.ToString())
+            .UniqueForRuntime();
     }
 
     [Test]
@@ -119,21 +123,8 @@ public class Tests
     {
         var stream = await ConvertAsync(extension);
 
-        await Verify(stream, extension: extension.ToString());
-    }
-
-    [Test]
-    public void AllEntriesAreStored([Values] Extension extension)
-    {
-        var stream = Convert(extension);
-        stream.Position = 0;
-        using var archive = new Archive(stream, ZipArchiveMode.Read);
-        foreach (var entry in archive.Entries)
-        {
-            // Verify compression method is Stored (0) by checking compressed == uncompressed
-            Assert.That(entry.CompressedLength, Is.EqualTo(entry.Length),
-                $"Entry '{entry.FullName}' is not stored (compressed={entry.CompressedLength}, uncompressed={entry.Length})");
-        }
+        await Verify(stream, extension: extension.ToString())
+            .UniqueForRuntime();
     }
 
     [Test]
