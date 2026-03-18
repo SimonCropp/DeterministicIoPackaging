@@ -67,8 +67,9 @@ The content patcher receives the relationship patcher via constructor injection.
 
 ### ZIP Output
 
-- `ZipStorer` rewrites ZIP archives with all entries using compression method 0 (Stored), bypassing net48's `ZipArchive` which ignores `CompressionLevel.NoCompression`
+- ZIP entries use Deflate compression via `ZipArchive`. Binary output may differ between net48 and net10.0+ due to Deflate implementation differences, but XML content is identical
 - Entries are sorted by `FullName` using `StringComparer.Ordinal`
+- Binary snapshot tests use `UniqueForRuntime` to allow framework-specific verified files
 - `PngNormalizer` writes raw zlib stored blocks (CMF+FLG + DEFLATE stored blocks + Adler-32) instead of using `ZLibStream`, which produces different output on net48 vs net10.0
 
 Example patcher structure:
