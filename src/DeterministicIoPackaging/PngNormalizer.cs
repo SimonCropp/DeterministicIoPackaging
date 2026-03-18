@@ -101,8 +101,10 @@ static class PngNormalizer
         // Write raw zlib stored format to avoid framework DEFLATE differences.
         // Format: CMF(0x78) FLG(0x01) + DEFLATE stored blocks + Adler-32
         using var compressOutput = new MemoryStream();
-        compressOutput.WriteByte(0x78); // CMF: deflate, 32K window
-        compressOutput.WriteByte(0x01); // FLG: no dict, check bits make CMF*256+FLG divisible by 31
+        // CMF: deflate, 32K window
+        compressOutput.WriteByte(0x78);
+        // FLG: no dict, check bits make CMF*256+FLG divisible by 31
+        compressOutput.WriteByte(0x01);
 
         // Write DEFLATE stored blocks (max 65535 bytes each)
         var offset = 0;
@@ -148,14 +150,31 @@ static class PngNormalizer
         target.Write(crcBytes);
     }
 
+    // Adler-32 checksum as defined in RFC 1950.
+    // a = 1 + sum of all bytes, b = sum of all intermediate a values, both mod 65521.
+    // The modulo is deferred in batches of up to 5552 bytes to avoid per-byte division
+    // while staying within uint32 overflow limits.
     static uint Adler32(byte[] data, int length)
     {
+        // largest prime smaller than 2^16
+        const uint mod = 65521;
+        // max iterations before uint32 overflow of b
+        const int nmax = 5552;
         var a = 1u;
         var b = 0u;
-        for (var i = 0; i < length; i++)
+        var offset = 0;
+        while (offset < length)
         {
-            a = (a + data[i]) % 65521;
-            b = (b + a) % 65521;
+            var count = Math.Min(length - offset, nmax);
+            for (var i = 0; i < count; i++)
+            {
+                a += data[offset + i];
+                b += a;
+            }
+
+            a %= mod;
+            b %= mod;
+            offset += count;
         }
 
         return (b << 16) | a;
