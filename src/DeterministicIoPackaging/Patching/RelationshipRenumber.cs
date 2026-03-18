@@ -1,5 +1,8 @@
 static class RelationshipRenumber
 {
+    static XNamespace r = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+    static XName rId = r + "id";
+
     public static Dictionary<string, string> RenumberAndSort(XDocument xml)
     {
         var root = xml.Root!;
@@ -24,11 +27,9 @@ static class RelationshipRenumber
 
     public static void RemapIds(XDocument xml, Dictionary<string, string> mapping)
     {
-        foreach (var attr in xml.Descendants().Attributes())
+        foreach (var attr in xml.Descendants().Attributes(rId))
         {
-            if (attr.Name.LocalName == "id" &&
-                attr.Name.Namespace != XNamespace.None &&
-                mapping.TryGetValue(attr.Value, out var newId))
+            if (mapping.TryGetValue(attr.Value, out var newId))
             {
                 attr.SetValue(newId);
             }
