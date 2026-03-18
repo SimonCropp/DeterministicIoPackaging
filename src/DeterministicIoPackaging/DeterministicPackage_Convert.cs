@@ -21,26 +21,22 @@ public static partial class DeterministicPackage
     public static void Convert(Stream source, Stream target)
     {
         var patchers = CreatePatchers();
-        using (var sourceArchive = ReadArchive(source))
-        using (var targetArchive = CreateArchive(target))
+        using var sourceArchive = ReadArchive(source);
+        using var targetArchive = CreateArchive(target);
+        foreach (var sourceEntry in sourceArchive.OrderedEntries())
         {
-            foreach (var sourceEntry in sourceArchive.OrderedEntries())
-            {
-                DuplicateEntry(sourceEntry, targetArchive, patchers);
-            }
+            DuplicateEntry(sourceEntry, targetArchive, patchers);
         }
     }
 
     public static async Task ConvertAsync(Stream source, Stream target, Cancel token = default)
     {
         var patchers = CreatePatchers();
-        using (var sourceArchive = ReadArchive(source))
-        using (var targetArchive = CreateArchive(target))
+        using var sourceArchive = ReadArchive(source);
+        using var targetArchive = CreateArchive(target);
+        foreach (var sourceEntry in sourceArchive.OrderedEntries())
         {
-            foreach (var sourceEntry in OrderedEntries(sourceArchive))
-            {
-                await DuplicateEntryAsync(sourceEntry, targetArchive, patchers, token);
-            }
+            await DuplicateEntryAsync(sourceEntry, targetArchive, patchers, token);
         }
     }
 
