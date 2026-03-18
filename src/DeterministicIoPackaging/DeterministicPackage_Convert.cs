@@ -40,7 +40,7 @@ public static partial class DeterministicPackage
         }
     }
 
-    private static IOrderedEnumerable<Entry> OrderedEntries(this Archive archive) =>
+    static IOrderedEnumerable<Entry> OrderedEntries(this Archive archive) =>
         archive.Entries
-            .OrderBy(_ => _.FullName);
+            .OrderBy(_ => _.FullName, StringComparer.Ordinal);
 }
