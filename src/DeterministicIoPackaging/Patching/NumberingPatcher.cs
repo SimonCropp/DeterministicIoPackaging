@@ -3,7 +3,9 @@ class NumberingPatcher : IPatcher
     static XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
     static XName nsid = w + "nsid";
     static XName abstractNum = w + "abstractNum";
+    static XName abstractNumId = w + "abstractNumId";
     static XName num = w + "num";
+    static XName val = w + "val";
 
     public bool IsMatch(Entry entry) =>
         entry.FullName is "word/numbering.xml";
@@ -13,11 +15,10 @@ class NumberingPatcher : IPatcher
         var root = xml.Root!;
 
         // Remove all w:nsid elements
-        var nsidElements = root.Descendants(nsid).ToList();
-        foreach (var element in nsidElements)
-        {
-            element.Remove();
-        }
+        root
+            .Descendants(nsid)
+            .ToList()
+            .Remove();
 
         // Remove redundant namespace declarations from all descendants
         // This normalizes elements that declare xmlns:p2="..." when the root already has the default namespace
@@ -35,7 +36,7 @@ class NumberingPatcher : IPatcher
         var originalIds = new Dictionary<XElement, string>();
         foreach (var element in abstractNums)
         {
-            var attr = element.Attribute(w + "abstractNumId");
+            var attr = element.Attribute(abstractNumId);
             if (attr != null)
             {
                 originalIds[element] = attr.Value;
@@ -61,7 +62,7 @@ class NumberingPatcher : IPatcher
         // Update abstractNumId attributes to their new sorted index
         foreach (var (element, index) in sortedAbstractNums.Select((e, i) => (e, i)))
         {
-            element.Attribute(w + "abstractNumId")!.Value = index.ToString();
+            element.Attribute(abstractNumId)!.Value = index.ToString();
         }
 
         // Replace abstractNum elements with sorted ones
@@ -71,15 +72,20 @@ class NumberingPatcher : IPatcher
         // Update references in num elements
         foreach (var numElement in root.Elements(num))
         {
-            var abstractNumIdElement = numElement.Element(w + "abstractNumId");
-            if (abstractNumIdElement != null)
+            var abstractNumIdElement = numElement.Element(abstractNumId);
+            if (abstractNumIdElement == null)
             {
-                var oldId = abstractNumIdElement.Attribute(w + "val")?.Value;
-                if (oldId != null && idMapping.TryGetValue(oldId, out var newId))
-                {
-                    abstractNumIdElement.Attribute(w + "val")!.Value = newId;
-                }
+                continue;
             }
+
+            var oldId = abstractNumIdElement.Attribute(val)?.Value;
+            if (oldId == null ||
+                !idMapping.TryGetValue(oldId, out var newId))
+            {
+                continue;
+            }
+
+            abstractNumIdElement.Attribute(val)!.Value = newId;
         }
     }
 
@@ -91,16 +97,13 @@ class NumberingPatcher : IPatcher
         foreach (var element in root.DescendantsAndSelf())
         {
             // Find namespace attributes that declare the same URI as the default namespace
-            var redundantAttrs = element.Attributes()
-                .Where(a => a.IsNamespaceDeclaration &&
-                            a.Value == defaultNs.NamespaceName &&
-                            a.Name.LocalName != "xmlns") // Don't remove the default namespace declaration itself
-                .ToList();
-
-            foreach (var attr in redundantAttrs)
-            {
-                attr.Remove();
-            }
+            element.Attributes()
+                .Where(_ => _.IsNamespaceDeclaration &&
+                            _.Value == defaultNs.NamespaceName &&
+                            // Don't remove the default namespace declaration itself
+                            _.Name.LocalName != "xmlns")
+                .ToList()
+                .Remove();
         }
     }
 }

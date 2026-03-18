@@ -57,10 +57,14 @@ static class PngNormalizer
 
     static bool ProcessChunk(byte[] header, byte[] body, int chunkLength, Stream target, MemoryStream idatData, ref bool flushedIdat)
     {
-        var isIdat = header[4] == 'I' && header[5] == 'D' &&
-                     header[6] == 'A' && header[7] == 'T';
-        var isIend = header[4] == 'I' && header[5] == 'E' &&
-                     header[6] == 'N' && header[7] == 'D';
+        var isIdat = header[4] == 'I' &&
+                     header[5] == 'D' &&
+                     header[6] == 'A' &&
+                     header[7] == 'T';
+        var isIend = header[4] == 'I' &&
+                     header[5] == 'E' &&
+                     header[6] == 'N' &&
+                     header[7] == 'D';
 
         if (isIdat)
         {
@@ -68,7 +72,8 @@ static class PngNormalizer
         }
         else
         {
-            if (!flushedIdat && idatData.Length > 0)
+            if (!flushedIdat &&
+                idatData.Length > 0)
             {
                 flushedIdat = true;
                 WriteNormalizedIdat(target, idatData.GetBuffer(), (int) idatData.Length);
