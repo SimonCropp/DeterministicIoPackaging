@@ -49,20 +49,16 @@ class NumberingPatcher : IPatcher
             .OrderBy(_ => _.ToString())
             .ToList();
 
-        // Build the mapping: old ID -> new sorted index
+        // Build the mapping and update abstractNumId attributes to their new sorted index
         for (var i = 0; i < sortedAbstractNums.Count; i++)
         {
             var element = sortedAbstractNums[i];
+            var newId = i.ToString();
+            element.Attribute(abstractNumId)!.Value = newId;
             if (originalIds.TryGetValue(element, out var oldId))
             {
-                idMapping[oldId] = i.ToString();
+                idMapping[oldId] = newId;
             }
-        }
-
-        // Update abstractNumId attributes to their new sorted index
-        foreach (var (element, index) in sortedAbstractNums.Select((e, i) => (e, i)))
-        {
-            element.Attribute(abstractNumId)!.Value = index.ToString();
         }
 
         // Replace abstractNum elements with sorted ones
