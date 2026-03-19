@@ -126,34 +126,27 @@ public static partial class DeterministicPackage
     // The OpenXml SDK may output spreadsheetml XML with a prefixed default namespace
     // (e.g. <x:worksheet xmlns:x="...">) instead of an unprefixed default namespace.
     // Rewrite to unprefixed form for compatibility with tools like Spreadsheet Compare.
-    internal static bool FixPrefixedDefaultNamespace(XDocument xml)
+    internal static void FixPrefixedDefaultNamespace(XDocument xml)
     {
         var root = xml.Root;
         if (root == null)
         {
-            return false;
+            return;
         }
 
         var ns = root.Name.Namespace;
         if (ns.NamespaceName is not "http://schemas.openxmlformats.org/spreadsheetml/2006/main")
         {
-            return false;
+            return;
         }
 
         var prefix = root.GetPrefixOfNamespace(ns);
         if (string.IsNullOrEmpty(prefix))
         {
-            return false;
+            return;
         }
 
-        var prefixedAttr = root.Attribute(XNamespace.Xmlns + prefix);
-        if (prefixedAttr == null)
-        {
-            return false;
-        }
-
-        prefixedAttr.Remove();
-        return true;
+        root.Attribute(XNamespace.Xmlns + prefix)?.Remove();
     }
 
     static Entry CreateEntry(Entry source, Archive target)
