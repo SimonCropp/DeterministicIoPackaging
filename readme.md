@@ -23,14 +23,20 @@ Example file formats that leverage System.IO.Packaging
  * For an input package stream
  * Duplicate each entry with Deflate compression and consistent order
  * Omit `package/services/metadata/core-properties/*.psmdcp` entries
- * For the relationships entry `_rels/.rels`
+ * Omit `.signature.p7s` entries (NuGet package signatures are invalidated by the conversion since package contents are modified)
+ * For all relationship entries (`.rels` files)
    * Modify the `Id` of each `Relationship` to be deterministic
+   * Convert absolute `Target` paths to relative (e.g. `Target="/xl/workbook.xml"` becomes `Target="xl/workbook.xml"`)
+   * Order `Relationship`s by `Type`
+ * For the relationships entry `_rels/.rels`
    * Remove the `Relationship` for the `.psmdcp` entry
-   * Order `Relationship`s by `Type`
- * For the relationships entry `xl/_rels/workbook.xml.rels`
-   * Order `Relationship`s by `Type`
  * For the relationships entry `docProps/core.xml`
    * Remove the `creator`, `created`, `lastModifiedBy`, and `modified` elements
+
+
+### Spreadsheet namespace validation
+
+The conversion throws if any spreadsheetml XML entry (e.g. `xl/workbook.xml`, `xl/worksheets/sheet1.xml`) uses a prefixed default namespace such as `<x:worksheet xmlns:x="...">` instead of the unprefixed form `<worksheet xmlns="...">`. This is because tools like Microsoft Spreadsheet Compare cannot open files with prefixed spreadsheetml elements. The OpenXml SDK can produce this form — ensure source xlsx files use default namespace declarations.
 
 
 ### Binary output across .NET frameworks
@@ -58,7 +64,7 @@ See [Verify Naming docs](https://github.com/VerifyTests/Verify/blob/main/docs/na
 using var sourceStream = File.OpenRead(packagePath);
 await DeterministicPackage.ConvertAsync(sourceStream, targetStream);
 ```
-<sup><a href='/src/Tests/Tests.cs#L267-L272' title='Snippet source file'>snippet source</a> | <a href='#snippet-ConvertAsync' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/Tests/Tests.cs#L226-L231' title='Snippet source file'>snippet source</a> | <a href='#snippet-ConvertAsync' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 
@@ -70,7 +76,7 @@ await DeterministicPackage.ConvertAsync(sourceStream, targetStream);
 using var sourceStream = File.OpenRead(packagePath);
 await DeterministicPackage.ConvertAsync(sourceStream, targetStream);
 ```
-<sup><a href='/src/Tests/Tests.cs#L267-L272' title='Snippet source file'>snippet source</a> | <a href='#snippet-ConvertAsync' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/Tests/Tests.cs#L226-L231' title='Snippet source file'>snippet source</a> | <a href='#snippet-ConvertAsync' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 
