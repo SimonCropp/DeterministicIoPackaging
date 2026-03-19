@@ -66,7 +66,7 @@ public static partial class DeterministicPackage
             return;
         }
 
-        if (sourceEntry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
+        if (IsSpreadsheetXml(sourceEntry))
         {
             var xml = XDocument.Load(sourceStream);
             FixPrefixedDefaultNamespace(xml);
@@ -106,7 +106,7 @@ public static partial class DeterministicPackage
             return;
         }
 
-        if (sourceEntry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
+        if (IsSpreadsheetXml(sourceEntry))
         {
             var xml = await XDocument.LoadAsync(sourceStream, LoadOptions.None, cancel);
             FixPrefixedDefaultNamespace(xml);
@@ -116,6 +116,10 @@ public static partial class DeterministicPackage
 
         await sourceStream.CopyToAsync(targetStream, cancel);
     }
+
+    static bool IsSpreadsheetXml(Entry entry) =>
+        entry.FullName.StartsWith("xl/") &&
+        entry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase);
 
     static Task SaveXml(XDocument xml, Stream targetStream, Cancel cancel) =>
         xml.SaveAsync(targetStream, SaveOptions.DisableFormatting, cancel);
