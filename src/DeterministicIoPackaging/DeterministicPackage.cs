@@ -66,6 +66,22 @@ public static partial class DeterministicPackage
             return;
         }
 
+        if (sourceEntry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
+        {
+            using var buffer = new MemoryStream();
+            sourceStream.CopyTo(buffer);
+            var rawBytes = buffer.ToArray();
+            var xml = XDocument.Load(new MemoryStream(rawBytes, writable: false));
+            if (FixPrefixedDefaultNamespace(xml))
+            {
+                SaveXml(xml, targetStream);
+                return;
+            }
+
+            targetStream.Write(rawBytes, 0, rawBytes.Length);
+            return;
+        }
+
         sourceStream.CopyTo(targetStream);
     }
 
@@ -98,6 +114,23 @@ public static partial class DeterministicPackage
             return;
         }
 
+        if (sourceEntry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
+        {
+            using var buffer = new MemoryStream();
+            await sourceStream.CopyToAsync(buffer, cancel);
+            var rawBytes = buffer.ToArray();
+            using var xmlStream = new MemoryStream(rawBytes, writable: false);
+            var xml = await XDocument.LoadAsync(xmlStream, LoadOptions.None, cancel);
+            if (FixPrefixedDefaultNamespace(xml))
+            {
+                await SaveXml(xml, targetStream, cancel);
+                return;
+            }
+
+            await targetStream.WriteAsync(rawBytes, 0, rawBytes.Length, cancel);
+            return;
+        }
+
         await sourceStream.CopyToAsync(targetStream, cancel);
     }
 
@@ -107,32 +140,38 @@ public static partial class DeterministicPackage
     static void SaveXml(XDocument xml, Stream targetStream) =>
         xml.Save(targetStream, SaveOptions.DisableFormatting);
 
-    internal static void ThrowIfPrefixedDefaultNamespace(XDocument xml, string entryName)
+    // The OpenXml SDK may output spreadsheetml XML with a prefixed default namespace
+    // (e.g. <x:worksheet xmlns:x="...">) instead of an unprefixed default namespace.
+    // Rewrite to unprefixed form for compatibility with tools like Spreadsheet Compare.
+    internal static bool FixPrefixedDefaultNamespace(XDocument xml)
     {
         var root = xml.Root;
         if (root == null)
         {
-            return;
+            return false;
         }
 
         var ns = root.Name.Namespace;
         if (ns.NamespaceName is not "http://schemas.openxmlformats.org/spreadsheetml/2006/main")
         {
-            return;
+            return false;
         }
 
         var prefix = root.GetPrefixOfNamespace(ns);
         if (string.IsNullOrEmpty(prefix))
         {
-            return;
+            return false;
         }
 
-        throw new(
-            $$"""
-              Entry '{{entryName}}' uses a namespace prefix '{{prefix}}' for its default namespace '{{ns}}'.
-              This causes compatibility issues with tools like Spreadsheet Compare.
-              Use a default namespace declaration (xmlns="...") instead of a prefixed one (xmlns:{prefix}="...").
-              """);
+        var prefixedAttr = root.Attribute(XNamespace.Xmlns + prefix);
+        if (prefixedAttr == null)
+        {
+            return false;
+        }
+
+        prefixedAttr.Remove();
+        root.SetAttributeValue("xmlns", ns.NamespaceName);
+        return true;
     }
 
     static Entry CreateEntry(Entry source, Archive target)

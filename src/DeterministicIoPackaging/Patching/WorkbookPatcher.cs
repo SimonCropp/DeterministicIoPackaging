@@ -7,7 +7,7 @@ class WorkbookPatcher(WorkbookRelationshipPatcher relsPatcher) : IPatcher
 
     public void PatchXml(XDocument xml, string entryName)
     {
-        DeterministicPackage.ThrowIfPrefixedDefaultNamespace(xml, entryName);
+        DeterministicPackage.FixPrefixedDefaultNamespace(xml);
 
         var absPath = xml
             .Descendants(alternateContent)

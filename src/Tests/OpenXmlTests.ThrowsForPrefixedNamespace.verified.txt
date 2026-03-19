@@ -1,7 +1,0 @@
-﻿{
-  Type: Exception,
-  Message:
-Entry 'xl/workbook.xml' uses a namespace prefix 'x' for its default namespace 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'.
-This causes compatibility issues with tools like Spreadsheet Compare.
-Use a default namespace declaration (xmlns="...") instead of a prefixed one (xmlns:{prefix}="...").
-}
