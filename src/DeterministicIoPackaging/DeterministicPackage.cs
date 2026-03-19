@@ -66,6 +66,14 @@ public static partial class DeterministicPackage
             return;
         }
 
+        if (sourceEntry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
+        {
+            var xml = XDocument.Load(sourceStream);
+            FixPrefixedDefaultNamespace(xml);
+            SaveXml(xml, targetStream);
+            return;
+        }
+
         sourceStream.CopyTo(targetStream);
     }
 
@@ -98,6 +106,14 @@ public static partial class DeterministicPackage
             return;
         }
 
+        if (sourceEntry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
+        {
+            var xml = await XDocument.LoadAsync(sourceStream, LoadOptions.None, cancel);
+            FixPrefixedDefaultNamespace(xml);
+            await SaveXml(xml, targetStream, cancel);
+            return;
+        }
+
         await sourceStream.CopyToAsync(targetStream, cancel);
     }
 
@@ -107,7 +123,10 @@ public static partial class DeterministicPackage
     static void SaveXml(XDocument xml, Stream targetStream) =>
         xml.Save(targetStream, SaveOptions.DisableFormatting);
 
-    internal static void ThrowIfPrefixedDefaultNamespace(XDocument xml, string entryName)
+    // The OpenXml SDK may output spreadsheetml XML with a prefixed default namespace
+    // (e.g. <x:worksheet xmlns:x="...">) instead of an unprefixed default namespace.
+    // Rewrite to unprefixed form for compatibility with tools like Spreadsheet Compare.
+    internal static void FixPrefixedDefaultNamespace(XDocument xml)
     {
         var root = xml.Root;
         if (root == null)
@@ -127,12 +146,7 @@ public static partial class DeterministicPackage
             return;
         }
 
-        throw new(
-            $$"""
-              Entry '{{entryName}}' uses a namespace prefix '{{prefix}}' for its default namespace '{{ns}}'.
-              This causes compatibility issues with tools like Spreadsheet Compare.
-              Use a default namespace declaration (xmlns="...") instead of a prefixed one (xmlns:{prefix}="...").
-              """);
+        root.Attribute(XNamespace.Xmlns + prefix)?.Remove();
     }
 
     static Entry CreateEntry(Entry source, Archive target)

@@ -6,12 +6,12 @@ using DocumentFormat.OpenXml.Spreadsheet;
 public class OpenXmlTests
 {
     [Test]
-    public async Task ThrowsForPrefixedNamespace()
+    public Task FixesPrefixedNamespace()
     {
         var xlsxStream = CreateSpreadsheet();
+        var result = DeterministicPackage.Convert(xlsxStream);
 
-        await Throws(() => DeterministicPackage.Convert(xlsxStream))
-            .IgnoreStackTrace();
+        return VerifyZip(result);
     }
 
     static MemoryStream CreateSpreadsheet()

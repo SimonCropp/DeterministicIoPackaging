@@ -5,7 +5,7 @@ class SheetPatcher: IPatcher
 
     public void PatchXml(XDocument xml, string entryName)
     {
-        DeterministicPackage.ThrowIfPrefixedDefaultNamespace(xml, entryName);
+        DeterministicPackage.FixPrefixedDefaultNamespace(xml);
         xml.Root!.Attribute(xName)?.Remove();
     }
 
