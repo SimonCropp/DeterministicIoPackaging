@@ -14,6 +14,7 @@
 *.verified.nuspec text eol=lf working-tree-encoding=UTF-8
 *.verified.rels text eol=lf working-tree-encoding=UTF-8
 *.verified.xml text eol=lf working-tree-encoding=UTF-8
+*.verified.txt text eol=lf working-tree-encoding=UTF-8
 
 .editorconfig text eol=lf working-tree-encoding=UTF-8
 *.sln.DotSettings text eol=lf working-tree-encoding=UTF-8
