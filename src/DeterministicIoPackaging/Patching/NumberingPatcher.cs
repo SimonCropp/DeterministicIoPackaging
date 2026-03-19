@@ -83,7 +83,6 @@ class NumberingPatcher : IPatcher
 
             abstractNumIdElement.Attribute(val)!.Value = newId;
         }
-
     }
 
     static void RemoveRedundantNamespaceDeclarations(XElement root)
