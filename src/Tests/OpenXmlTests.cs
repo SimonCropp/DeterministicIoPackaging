@@ -1,5 +1,3 @@
-#if NET10_0_OR_GREATER
-
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
@@ -8,13 +6,12 @@ using DocumentFormat.OpenXml.Spreadsheet;
 public class OpenXmlTests
 {
     [Test]
-    public void ThrowsForPrefixedNamespace()
+    public async Task ThrowsForPrefixedNamespace()
     {
         var xlsxStream = CreateSpreadsheet();
 
-        var exception = Assert.Throws<Exception>(() => DeterministicPackage.Convert(xlsxStream));
-        Assert.That(exception!.Message, Does.Contain("namespace prefix"));
-        Assert.That(exception.Message, Does.Contain("spreadsheetml"));
+        await Throws(() => DeterministicPackage.Convert(xlsxStream))
+            .IgnoreStackTrace();
     }
 
     static MemoryStream CreateSpreadsheet()
@@ -71,5 +68,3 @@ public class OpenXmlTests
             InlineString = new(new Text(value))
         };
 }
-
-#endif
