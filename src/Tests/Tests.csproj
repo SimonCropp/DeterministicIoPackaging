@@ -16,6 +16,7 @@
     <PackageReference Include="EmptyFiles" />
     <PackageReference Include="SimpleInfoName" />
     <PackageReference Include="Verify" />
+    <PackageReference Include="DocumentFormat.OpenXml" />
     <ProjectReference Include="..\DeterministicIoPackaging\DeterministicIoPackaging.csproj" />
     <PackageReference Include="ProjectDefaults" PrivateAssets="all" />
     <None Update="sample.*">
