@@ -109,7 +109,11 @@ public static partial class DeterministicPackage
 
     static Entry CreateEntry(Entry source, Archive target)
     {
-        var entry = target.CreateEntry(source.FullName, CompressionLevel.NoCompression);
+        // Use Deflate (Optimal) instead of NoCompression/Stored (method 0).
+        // Some tools (e.g. Spreadsheet Compare) cannot open ZIP files with Stored entries.
+        // Deflate output is deterministic within a given .NET runtime version,
+        // but may differ across runtimes (e.g. net48 vs net10.0).
+        var entry = target.CreateEntry(source.FullName, CompressionLevel.Optimal);
         entry.LastWriteTime = StableDateOffset;
         return entry;
     }
