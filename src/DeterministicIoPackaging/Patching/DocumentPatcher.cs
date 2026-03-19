@@ -8,7 +8,7 @@ class DocumentPatcher(DocumentRelationshipPatcher relsPatcher) : IPatcher
     public bool IsMatch(Entry entry) =>
         entry.FullName is "word/document.xml";
 
-    public void PatchXml(XDocument xml)
+    public void PatchXml(XDocument xml, string entryName)
     {
         var root = xml.Root!;
 
@@ -28,5 +28,6 @@ class DocumentPatcher(DocumentRelationshipPatcher relsPatcher) : IPatcher
         {
             RelationshipRenumber.RemapIds(xml, relsPatcher.IdMapping);
         }
+
     }
 }

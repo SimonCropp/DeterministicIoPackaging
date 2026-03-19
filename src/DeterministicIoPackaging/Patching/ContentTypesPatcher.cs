@@ -3,7 +3,7 @@ class ContentTypesPatcher : IPatcher
     public bool IsMatch(Entry entry) =>
         entry.FullName is "[Content_Types].xml";
 
-    public void PatchXml(XDocument xml)
+    public void PatchXml(XDocument xml, string entryName)
     {
         var root = xml.Root!;
         var elements = root.Elements()

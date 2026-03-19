@@ -10,7 +10,7 @@ class NumberingPatcher : IPatcher
     public bool IsMatch(Entry entry) =>
         entry.FullName is "word/numbering.xml";
 
-    public void PatchXml(XDocument xml)
+    public void PatchXml(XDocument xml, string entryName)
     {
         var root = xml.Root!;
 

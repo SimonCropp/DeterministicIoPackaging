@@ -55,7 +55,7 @@ public static partial class DeterministicPackage
             }
 
             var xml = XDocument.Load(sourceStream);
-            patcher.PatchXml(xml);
+            patcher.PatchXml(xml, sourceEntry.FullName);
             SaveXml(xml, targetStream);
             return;
         }
@@ -87,7 +87,7 @@ public static partial class DeterministicPackage
             }
 
             var xml = await XDocument.LoadAsync(sourceStream, LoadOptions.None, cancel);
-            patcher.PatchXml(xml);
+            patcher.PatchXml(xml, sourceEntry.FullName);
             await SaveXml(xml, targetStream, cancel);
             return;
         }
@@ -106,6 +106,34 @@ public static partial class DeterministicPackage
 
     static void SaveXml(XDocument xml, Stream targetStream) =>
         xml.Save(targetStream, SaveOptions.DisableFormatting);
+
+    internal static void ThrowIfPrefixedDefaultNamespace(XDocument xml, string entryName)
+    {
+        var root = xml.Root;
+        if (root == null)
+        {
+            return;
+        }
+
+        var ns = root.Name.Namespace;
+        if (ns.NamespaceName is not "http://schemas.openxmlformats.org/spreadsheetml/2006/main")
+        {
+            return;
+        }
+
+        var prefix = root.GetPrefixOfNamespace(ns);
+        if (string.IsNullOrEmpty(prefix))
+        {
+            return;
+        }
+
+        throw new(
+            $$"""
+              Entry '{{entryName}}' uses a namespace prefix '{{prefix}}' for its default namespace '{{ns}}'.
+              This causes compatibility issues with tools like Spreadsheet Compare.
+              Use a default namespace declaration (xmlns="...") instead of a prefixed one (xmlns:{prefix}="...").
+              """);
+    }
 
     static Entry CreateEntry(Entry source, Archive target)
     {

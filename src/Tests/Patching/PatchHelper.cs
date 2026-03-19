@@ -7,7 +7,7 @@ static class PatchHelper
     public static XDocument Patch(IPatcher patcher, string xml)
     {
         var document = XDocument.Parse(xml);
-        patcher.PatchXml(document);
+        patcher.PatchXml(document, "test");
 
         return document;
     }
