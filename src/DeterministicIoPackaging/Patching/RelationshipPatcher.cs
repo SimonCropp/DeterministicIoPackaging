@@ -3,7 +3,7 @@ class RelationshipPatcher : IPatcher
     public bool IsMatch(Entry entry) =>
         entry.FullName is "_rels/.rels";
 
-    public bool PatchXml(XDocument xml, string entryName)
+    public void PatchXml(XDocument xml, string entryName)
     {
         var root = xml.Root!;
 
@@ -14,7 +14,6 @@ class RelationshipPatcher : IPatcher
 
         RelationshipRenumber.RenumberAndSort(xml, entryName);
 
-        return true;
     }
 
     static bool IsPsmdcpElement(XElement element)

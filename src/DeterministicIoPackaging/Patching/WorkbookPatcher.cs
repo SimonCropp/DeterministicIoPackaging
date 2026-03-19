@@ -5,8 +5,10 @@ class WorkbookPatcher(WorkbookRelationshipPatcher relsPatcher) : IPatcher
     static XNamespace x15ac = "http://schemas.microsoft.com/office/spreadsheetml/2010/11/ac";
     static XName abspath = x15ac + "absPath";
 
-    public bool PatchXml(XDocument xml, string entryName)
+    public void PatchXml(XDocument xml, string entryName)
     {
+        DeterministicPackage.ThrowIfPrefixedDefaultNamespace(xml, entryName);
+
         var absPath = xml
             .Descendants(alternateContent)
             .FirstOrDefault(_ => _.Descendants(abspath).Any());
@@ -18,7 +20,6 @@ class WorkbookPatcher(WorkbookRelationshipPatcher relsPatcher) : IPatcher
             RelationshipRenumber.RemapIds(xml, relsPatcher.IdMapping);
         }
 
-        return true;
     }
 
     public bool IsMatch(Entry entry) =>

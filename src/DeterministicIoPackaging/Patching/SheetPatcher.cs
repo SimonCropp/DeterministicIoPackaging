@@ -3,16 +3,10 @@ class SheetPatcher: IPatcher
     static XNamespace xr = "http://schemas.microsoft.com/office/spreadsheetml/2014/revision";
     static XName xName = xr + "uid";
 
-    public bool PatchXml(XDocument xml, string entryName)
+    public void PatchXml(XDocument xml, string entryName)
     {
-        var attr = xml.Root!.Attribute(xName);
-        if (attr == null)
-        {
-            return false;
-        }
-
-        attr.Remove();
-        return true;
+        DeterministicPackage.ThrowIfPrefixedDefaultNamespace(xml, entryName);
+        xml.Root!.Attribute(xName)?.Remove();
     }
 
     public bool IsMatch(Entry entry)

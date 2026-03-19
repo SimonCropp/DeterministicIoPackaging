@@ -3,7 +3,7 @@ class ContentTypesPatcher(List<string> entryNames) : IPatcher
     public bool IsMatch(Entry entry) =>
         entry.FullName is "[Content_Types].xml";
 
-    public bool PatchXml(XDocument xml, string entryName)
+    public void PatchXml(XDocument xml, string entryName)
     {
         var root = xml.Root!;
         var ns = root.Name.Namespace;
@@ -18,7 +18,6 @@ class ContentTypesPatcher(List<string> entryNames) : IPatcher
 
         root.ReplaceAll(elements);
 
-        return true;
     }
 
     void NormalizeDefaults(XElement root, XNamespace ns)

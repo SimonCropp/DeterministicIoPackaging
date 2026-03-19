@@ -55,39 +55,15 @@ public static partial class DeterministicPackage
                 continue;
             }
 
-            using var buffer = new MemoryStream();
-            sourceStream.CopyTo(buffer);
-            buffer.Position = 0;
-            var xml = XDocument.Load(buffer);
-            if (patcher.PatchXml(xml, sourceEntry.FullName))
-            {
-                ThrowIfPrefixedDefaultNamespace(xml, sourceEntry.FullName);
-                SaveXml(xml, targetStream);
-            }
-            else
-            {
-                buffer.Position = 0;
-                buffer.CopyTo(targetStream);
-            }
-
+            var xml = XDocument.Load(sourceStream);
+            patcher.PatchXml(xml, sourceEntry.FullName);
+            SaveXml(xml, targetStream);
             return;
         }
 
         if (sourceEntry.FullName.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
         {
             PngNormalizer.Normalize(sourceStream, targetStream);
-            return;
-        }
-
-        if (sourceEntry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
-        {
-            using var buffer = new MemoryStream();
-            sourceStream.CopyTo(buffer);
-            buffer.Position = 0;
-            var xml = XDocument.Load(buffer);
-            ThrowIfPrefixedDefaultNamespace(xml, sourceEntry.FullName);
-            buffer.Position = 0;
-            buffer.CopyTo(targetStream);
             return;
         }
 
@@ -111,39 +87,15 @@ public static partial class DeterministicPackage
                 continue;
             }
 
-            using var buffer = new MemoryStream();
-            await sourceStream.CopyToAsync(buffer, cancel);
-            buffer.Position = 0;
-            var xml = await XDocument.LoadAsync(buffer, LoadOptions.None, cancel);
-            if (patcher.PatchXml(xml, sourceEntry.FullName))
-            {
-                ThrowIfPrefixedDefaultNamespace(xml, sourceEntry.FullName);
-                await SaveXml(xml, targetStream, cancel);
-            }
-            else
-            {
-                buffer.Position = 0;
-                await buffer.CopyToAsync(targetStream, cancel);
-            }
-
+            var xml = await XDocument.LoadAsync(sourceStream, LoadOptions.None, cancel);
+            patcher.PatchXml(xml, sourceEntry.FullName);
+            await SaveXml(xml, targetStream, cancel);
             return;
         }
 
         if (sourceEntry.FullName.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
         {
             await PngNormalizer.NormalizeAsync(sourceStream, targetStream, cancel);
-            return;
-        }
-
-        if (sourceEntry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
-        {
-            using var buffer = new MemoryStream();
-            await sourceStream.CopyToAsync(buffer, cancel);
-            buffer.Position = 0;
-            var xml = XDocument.Load(buffer);
-            ThrowIfPrefixedDefaultNamespace(xml, sourceEntry.FullName);
-            buffer.Position = 0;
-            await buffer.CopyToAsync(targetStream, cancel);
             return;
         }
 
@@ -156,7 +108,7 @@ public static partial class DeterministicPackage
     static void SaveXml(XDocument xml, Stream targetStream) =>
         xml.Save(targetStream, SaveOptions.DisableFormatting);
 
-    static void ThrowIfPrefixedDefaultNamespace(XDocument xml, string entryName)
+    internal static void ThrowIfPrefixedDefaultNamespace(XDocument xml, string entryName)
     {
         var root = xml.Root;
         if (root == null)

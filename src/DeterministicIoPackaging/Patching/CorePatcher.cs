@@ -9,7 +9,7 @@
     static XName created = dcterms + "created";
     static XName modified = dcterms + "modified";
 
-    public bool PatchXml(XDocument xml, string entryName)
+    public void PatchXml(XDocument xml, string entryName)
     {
         var root = xml.Root!;
         root.Element(creator)?.Remove();
@@ -17,7 +17,6 @@
         root.Element(created)?.Remove();
         root.Element(modified)?.Remove();
 
-        return true;
     }
 
     public bool IsMatch(Entry entry) =>

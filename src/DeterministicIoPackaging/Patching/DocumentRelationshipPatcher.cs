@@ -5,9 +5,6 @@ class DocumentRelationshipPatcher : IPatcher
     public bool IsMatch(Entry entry) =>
         entry.FullName is "word/_rels/document.xml.rels";
 
-    public bool PatchXml(XDocument xml, string entryName)
-    {
+    public void PatchXml(XDocument xml, string entryName) =>
         IdMapping = RelationshipRenumber.RenumberAndSort(xml, entryName);
-        return true;
-    }
 }

@@ -4,9 +4,6 @@ class SheetRelationshipPatcher : IPatcher
         entry.FullName.StartsWith("xl/worksheets/_rels/") &&
         entry.FullName.EndsWith(".xml.rels");
 
-    public bool PatchXml(XDocument xml, string entryName)
-    {
+    public void PatchXml(XDocument xml, string entryName) =>
         RelationshipRenumber.RenumberAndSort(xml, entryName);
-        return true;
-    }
 }
