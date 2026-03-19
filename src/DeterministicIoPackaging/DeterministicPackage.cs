@@ -127,9 +127,12 @@ public static partial class DeterministicPackage
             return;
         }
 
-        throw new($"Entry '{entryName}' uses a namespace prefix '{prefix}' for its default namespace '{ns}'. " +
-                   "This causes compatibility issues with tools like Spreadsheet Compare. " +
-                   "Use a default namespace declaration (xmlns=\"...\") instead of a prefixed one (xmlns:{prefix}=\"...\").");
+        throw new(
+            $$"""
+              Entry '{{entryName}}' uses a namespace prefix '{{prefix}}' for its default namespace '{{ns}}'.
+              This causes compatibility issues with tools like Spreadsheet Compare.
+              Use a default namespace declaration (xmlns="...") instead of a prefixed one (xmlns:{prefix}="...").
+              """);
     }
 
     static Entry CreateEntry(Entry source, Archive target)
