@@ -5,14 +5,13 @@ public static partial class DeterministicPackage
     public static DateTime StableDate { get; } = new(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     public static DateTimeOffset StableDateOffset { get; } = new(StableDate);
 
-    static IReadOnlyList<IPatcher> CreatePatchers(Archive archive)
+    static IReadOnlyList<IPatcher> CreatePatchers()
     {
-        var entryNames = archive.Entries.Select(_ => _.FullName).ToList();
         var workbookRelsPatcher = new WorkbookRelationshipPatcher();
         var documentRelsPatcher = new DocumentRelationshipPatcher();
         return
         [
-            new ContentTypesPatcher(entryNames),
+            new ContentTypesPatcher(),
             new RelationshipPatcher(),
             new SheetPatcher(),
             workbookRelsPatcher,
