@@ -68,17 +68,9 @@ public static partial class DeterministicPackage
 
         if (sourceEntry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
         {
-            using var buffer = new MemoryStream();
-            sourceStream.CopyTo(buffer);
-            var rawBytes = buffer.ToArray();
-            var xml = XDocument.Load(new MemoryStream(rawBytes, writable: false));
-            if (FixPrefixedDefaultNamespace(xml))
-            {
-                SaveXml(xml, targetStream);
-                return;
-            }
-
-            targetStream.Write(rawBytes, 0, rawBytes.Length);
+            var xml = XDocument.Load(sourceStream);
+            FixPrefixedDefaultNamespace(xml);
+            SaveXml(xml, targetStream);
             return;
         }
 
@@ -116,18 +108,9 @@ public static partial class DeterministicPackage
 
         if (sourceEntry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
         {
-            using var buffer = new MemoryStream();
-            await sourceStream.CopyToAsync(buffer, cancel);
-            var rawBytes = buffer.ToArray();
-            using var xmlStream = new MemoryStream(rawBytes, writable: false);
-            var xml = await XDocument.LoadAsync(xmlStream, LoadOptions.None, cancel);
-            if (FixPrefixedDefaultNamespace(xml))
-            {
-                await SaveXml(xml, targetStream, cancel);
-                return;
-            }
-
-            await targetStream.WriteAsync(rawBytes, 0, rawBytes.Length, cancel);
+            var xml = await XDocument.LoadAsync(sourceStream, LoadOptions.None, cancel);
+            FixPrefixedDefaultNamespace(xml);
+            await SaveXml(xml, targetStream, cancel);
             return;
         }
 
