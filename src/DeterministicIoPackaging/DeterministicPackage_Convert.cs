@@ -20,9 +20,8 @@ public static partial class DeterministicPackage
 
     public static void Convert(Stream source, Stream target)
     {
-        var (patchers, contentTypes) = CreatePatchers();
         using var sourceArchive = ReadArchive(source);
-        contentTypes.SetEntryNames(sourceArchive.Entries.Select(_ => _.FullName).ToList());
+        var patchers = CreatePatchers(sourceArchive);
         using var targetArchive = CreateArchive(target);
         foreach (var sourceEntry in sourceArchive.OrderedEntries())
         {
@@ -32,9 +31,8 @@ public static partial class DeterministicPackage
 
     public static async Task ConvertAsync(Stream source, Stream target, Cancel token = default)
     {
-        var (patchers, contentTypes) = CreatePatchers();
         using var sourceArchive = ReadArchive(source);
-        contentTypes.SetEntryNames(sourceArchive.Entries.Select(_ => _.FullName).ToList());
+        var patchers = CreatePatchers(sourceArchive);
         using var targetArchive = CreateArchive(target);
         foreach (var sourceEntry in sourceArchive.OrderedEntries())
         {

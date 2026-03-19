@@ -8,13 +8,13 @@ using DocumentFormat.OpenXml.Spreadsheet;
 public class OpenXmlTests
 {
     [Test]
-    public Task CreateAndConvert()
+    public void ThrowsForPrefixedNamespace()
     {
         var xlsxStream = CreateSpreadsheet();
-        var result = DeterministicPackage.Convert(xlsxStream);
 
-        return Verify(result, extension: "xlsx")
-            .UniqueForRuntime();
+        var exception = Assert.Throws<Exception>(() => DeterministicPackage.Convert(xlsxStream));
+        Assert.That(exception!.Message, Does.Contain("namespace prefix"));
+        Assert.That(exception.Message, Does.Contain("spreadsheetml"));
     }
 
     static MemoryStream CreateSpreadsheet()
@@ -35,6 +35,15 @@ public class OpenXmlTests
             SheetId = 1,
             Name = "Sheet1"
         });
+
+        var stylesPart = workbookPart.AddNewPart<WorkbookStylesPart>();
+        stylesPart.Stylesheet = new(
+            new Fonts(new Font()),
+            new Fills(
+                new Fill(new PatternFill { PatternType = PatternValues.None }),
+                new Fill(new PatternFill { PatternType = PatternValues.Gray125 })),
+            new Borders(new Border()),
+            new CellFormats(new CellFormat()));
 
         var sheetData = worksheetPart.Worksheet.GetFirstChild<SheetData>()!;
 

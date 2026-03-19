@@ -5,7 +5,7 @@ class WorkbookPatcher(WorkbookRelationshipPatcher relsPatcher) : IPatcher
     static XNamespace x15ac = "http://schemas.microsoft.com/office/spreadsheetml/2010/11/ac";
     static XName abspath = x15ac + "absPath";
 
-    public void PatchXml(XDocument xml)
+    public bool PatchXml(XDocument xml, string entryName)
     {
         var absPath = xml
             .Descendants(alternateContent)
@@ -17,6 +17,8 @@ class WorkbookPatcher(WorkbookRelationshipPatcher relsPatcher) : IPatcher
         {
             RelationshipRenumber.RemapIds(xml, relsPatcher.IdMapping);
         }
+
+        return true;
     }
 
     public bool IsMatch(Entry entry) =>

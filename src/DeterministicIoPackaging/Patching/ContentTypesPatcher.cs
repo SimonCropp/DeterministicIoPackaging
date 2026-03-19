@@ -1,14 +1,9 @@
-class ContentTypesPatcher : IPatcher
+class ContentTypesPatcher(List<string> entryNames) : IPatcher
 {
-    List<string>? entryNames;
-
-    public void SetEntryNames(List<string> names) =>
-        entryNames = names;
-
     public bool IsMatch(Entry entry) =>
         entry.FullName is "[Content_Types].xml";
 
-    public void PatchXml(XDocument xml)
+    public bool PatchXml(XDocument xml, string entryName)
     {
         var root = xml.Root!;
         var ns = root.Name.Namespace;
@@ -22,15 +17,12 @@ class ContentTypesPatcher : IPatcher
             .ToList();
 
         root.ReplaceAll(elements);
+
+        return true;
     }
 
     void NormalizeDefaults(XElement root, XNamespace ns)
     {
-        if (entryNames is null)
-        {
-            return;
-        }
-
         var defaults = root.Elements(ns + "Default").ToList();
 
         foreach (var defaultElement in defaults)

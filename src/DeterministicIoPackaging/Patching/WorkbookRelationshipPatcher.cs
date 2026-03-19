@@ -5,6 +5,9 @@ class WorkbookRelationshipPatcher : IPatcher
     public bool IsMatch(Entry entry) =>
         entry.FullName is "xl/_rels/workbook.xml.rels";
 
-    public void PatchXml(XDocument xml) =>
-        IdMapping = RelationshipRenumber.RenumberAndSort(xml);
+    public bool PatchXml(XDocument xml, string entryName)
+    {
+        IdMapping = RelationshipRenumber.RenumberAndSort(xml, entryName);
+        return true;
+    }
 }

@@ -10,7 +10,7 @@ class NumberingPatcher : IPatcher
     public bool IsMatch(Entry entry) =>
         entry.FullName is "word/numbering.xml";
 
-    public void PatchXml(XDocument xml)
+    public bool PatchXml(XDocument xml, string entryName)
     {
         var root = xml.Root!;
 
@@ -83,6 +83,8 @@ class NumberingPatcher : IPatcher
 
             abstractNumIdElement.Attribute(val)!.Value = newId;
         }
+
+        return true;
     }
 
     static void RemoveRedundantNamespaceDeclarations(XElement root)
