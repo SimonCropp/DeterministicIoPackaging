@@ -141,7 +141,13 @@ public static partial class DeterministicPackage
         // Some tools (e.g. Spreadsheet Compare) cannot open ZIP files with Stored entries.
         // Deflate output is deterministic within a given .NET runtime version,
         // but may differ across runtimes (e.g. net48 vs net10.0).
-        var entry = target.CreateEntry(source.FullName, CompressionLevel.Optimal);
+        // NuGet requires compression method 0 (Stored) for .signature.p7s (NU3005).
+        // CompressionLevel.NoCompression produces method 0 on .NET (Core) but not on
+        // .NET Framework, where it still uses Deflate. This is a known Framework limitation.
+        var compressionLevel = source.FullName is ".signature.p7s"
+            ? CompressionLevel.NoCompression
+            : CompressionLevel.Optimal;
+        var entry = target.CreateEntry(source.FullName, compressionLevel);
         entry.LastWriteTime = StableDateOffset;
         return entry;
     }

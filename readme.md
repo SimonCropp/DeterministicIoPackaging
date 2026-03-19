@@ -58,7 +58,7 @@ See [Verify Naming docs](https://github.com/VerifyTests/Verify/blob/main/docs/na
 using var sourceStream = File.OpenRead(packagePath);
 await DeterministicPackage.ConvertAsync(sourceStream, targetStream);
 ```
-<sup><a href='/src/Tests/Tests.cs#L217-L222' title='Snippet source file'>snippet source</a> | <a href='#snippet-ConvertAsync' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/Tests/Tests.cs#L267-L272' title='Snippet source file'>snippet source</a> | <a href='#snippet-ConvertAsync' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 
@@ -70,7 +70,7 @@ await DeterministicPackage.ConvertAsync(sourceStream, targetStream);
 using var sourceStream = File.OpenRead(packagePath);
 await DeterministicPackage.ConvertAsync(sourceStream, targetStream);
 ```
-<sup><a href='/src/Tests/Tests.cs#L217-L222' title='Snippet source file'>snippet source</a> | <a href='#snippet-ConvertAsync' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/Tests/Tests.cs#L267-L272' title='Snippet source file'>snippet source</a> | <a href='#snippet-ConvertAsync' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 
