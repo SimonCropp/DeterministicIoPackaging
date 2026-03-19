@@ -179,54 +179,13 @@ public class Tests
         }
     }
 
-    // CompressionLevel.NoCompression only produces true Stored (method 0) on .NET (Core).
-    // On .NET Framework it still uses Deflate, which is a known platform limitation.
-#if NET
     [Test]
-#endif
-    public void NupkgSignatureCompressionIsPreserved()
+    public void NupkgSignatureIsRemoved()
     {
         var stream = Convert(Extension.nupkg);
         stream.Position = 0;
-
-        // Read the compression method from the local file header for .signature.p7s.
-        // ZipArchiveEntry doesn't expose compression method, so parse the zip directly.
-        var bytes = stream.ToArray();
-        var compressionMethod = GetCompressionMethod(bytes, ".signature.p7s");
-        Assert.That(
-            compressionMethod,
-            Is.EqualTo((ushort)0),
-            ".signature.p7s must use Stored compression (method 0) for NuGet compatibility (NU3005)");
-    }
-
-    static ushort GetCompressionMethod(byte[] zipBytes, string entryName)
-    {
-        var pos = 0;
-        while (pos < zipBytes.Length - 4)
-        {
-            // Local file header signature
-            if (zipBytes[pos] != 0x50 || zipBytes[pos + 1] != 0x4B ||
-                zipBytes[pos + 2] != 0x03 || zipBytes[pos + 3] != 0x04)
-            {
-                pos++;
-                continue;
-            }
-
-            var method = BinaryPrimitives.ReadUInt16LittleEndian(zipBytes.AsSpan(pos + 8));
-            var nameLength = BinaryPrimitives.ReadUInt16LittleEndian(zipBytes.AsSpan(pos + 26));
-            var extraLength = BinaryPrimitives.ReadUInt16LittleEndian(zipBytes.AsSpan(pos + 28));
-            var name = System.Text.Encoding.UTF8.GetString(zipBytes, pos + 30, nameLength);
-
-            if (name == entryName)
-            {
-                return method;
-            }
-
-            var compressedSize = BinaryPrimitives.ReadUInt32LittleEndian(zipBytes.AsSpan(pos + 18));
-            pos += 30 + nameLength + extraLength + (int)compressedSize;
-        }
-
-        throw new($"Entry '{entryName}' not found in zip");
+        using var archive = new Archive(stream, ZipArchiveMode.Read);
+        Assert.That(archive.GetEntry(".signature.p7s"), Is.Null);
     }
 
     public enum Extension

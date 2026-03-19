@@ -38,7 +38,7 @@ public static partial class DeterministicPackage
 
     static void DuplicateEntry(Entry sourceEntry, Archive targetArchive, IReadOnlyList<IPatcher> currentPatchers)
     {
-        if (IsPsmdcp(sourceEntry))
+        if (IsSkippedEntry(sourceEntry))
         {
             return;
         }
@@ -71,7 +71,7 @@ public static partial class DeterministicPackage
 
     static async Task DuplicateEntryAsync(Entry sourceEntry, Archive targetArchive, IReadOnlyList<IPatcher> currentPatchers, Cancel cancel)
     {
-        if (IsPsmdcp(sourceEntry))
+        if (IsSkippedEntry(sourceEntry))
         {
             return;
         }
@@ -141,18 +141,18 @@ public static partial class DeterministicPackage
         // Some tools (e.g. Spreadsheet Compare) cannot open ZIP files with Stored entries.
         // Deflate output is deterministic within a given .NET runtime version,
         // but may differ across runtimes (e.g. net48 vs net10.0).
-        // NuGet requires compression method 0 (Stored) for .signature.p7s (NU3005).
-        // CompressionLevel.NoCompression produces method 0 on .NET (Core) but not on
-        // .NET Framework, where it still uses Deflate. This is a known Framework limitation.
-        var compressionLevel = source.FullName is ".signature.p7s"
-            ? CompressionLevel.NoCompression
-            : CompressionLevel.Optimal;
-        var entry = target.CreateEntry(source.FullName, compressionLevel);
+        var entry = target.CreateEntry(source.FullName, CompressionLevel.Optimal);
         entry.LastWriteTime = StableDateOffset;
         return entry;
     }
 
-    static bool IsPsmdcp(Entry entry) =>
-        entry.FullName.StartsWith("package/services/metadata/core-properties/") &&
-        entry.Name.EndsWith("psmdcp");
+    // psmdcp: NuGet core-properties metadata with non-deterministic filenames
+    // .signature.p7s: NuGet package signature — removed because the deterministic
+    //   conversion modifies package contents, which invalidates the signature.
+    //   Additionally, NuGet requires this entry to use Stored compression (method 0),
+    //   which ZipArchive.CreateEntry cannot reliably produce on .NET Framework.
+    static bool IsSkippedEntry(Entry entry) =>
+        entry.FullName is ".signature.p7s" ||
+        (entry.FullName.StartsWith("package/services/metadata/core-properties/") &&
+         entry.Name.EndsWith("psmdcp"));
 }
