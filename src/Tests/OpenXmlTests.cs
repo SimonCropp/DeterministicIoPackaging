@@ -10,7 +10,16 @@ public class OpenXmlTests
     [Test]
     public Task CreateAndConvert()
     {
-        using var backingStream = new MemoryStream();
+        var xlsxStream = CreateSpreadsheet();
+        var result = DeterministicPackage.Convert(xlsxStream);
+
+        return Verify(result, extension: "xlsx")
+            .UniqueForRuntime();
+    }
+
+    static MemoryStream CreateSpreadsheet()
+    {
+        var backingStream = new MemoryStream();
         using var document = SpreadsheetDocument.Create(backingStream, SpreadsheetDocumentType.Workbook);
 
         var workbookPart = document.AddWorkbookPart();
@@ -39,13 +48,10 @@ public class OpenXmlTests
         dataRow.Append(CreateCell("B2", "123"));
         sheetData.Append(dataRow);
 
-        document.Clone(backingStream);
-
-        backingStream.Position = 0;
-        var result = DeterministicPackage.Convert(backingStream);
-
-        return Verify(result, extension: "xlsx")
-            .UniqueForRuntime();
+        var outputStream = new MemoryStream();
+        document.Clone(outputStream);
+        outputStream.Position = 0;
+        return outputStream;
     }
 
     static Cell CreateCell(string reference, string value) =>
