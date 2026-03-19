@@ -153,7 +153,6 @@ public static partial class DeterministicPackage
         }
 
         prefixedAttr.Remove();
-        root.SetAttributeValue("xmlns", ns.NamespaceName);
         return true;
     }
 
