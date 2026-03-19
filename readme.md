@@ -37,7 +37,7 @@ Example file formats that leverage System.IO.Packaging
 
 Binary output may differ between .NET Framework (net48) and .NET (net10.0+) due to differences in Deflate compression implementations. The XML content within entries is identical — only the compressed bytes differ.
 
-When snapshot-testing binary package output across multiple target frameworks using [Verify](https://github.com/VerifyTests/Verify), use `UniqueForRuntime` to generate framework-specific verified files:
+This applies to all package formats (xlsx, docx, nupkg, etc.). When snapshot-testing binary package output across multiple target frameworks using [Verify](https://github.com/VerifyTests/Verify), use `UniqueForRuntime` to generate framework-specific verified files:
 
 ```cs
 await Verify(stream, extension: "xlsx")
