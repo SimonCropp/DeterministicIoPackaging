@@ -2,6 +2,24 @@
 public class RelationshipPatcherTests
 {
     [Test]
+    public Task AbsoluteTargetsAreNormalized()
+    {
+        var xml =
+            """
+            <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+              <Relationship
+                Id="R1"
+                Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"
+                Target="/xl/workbook.xml"/>
+            </Relationships>
+            """;
+        var document = XDocument.Parse(xml);
+        new RelationshipPatcher().PatchXml(document, "_rels/.rels");
+        return Verify(document);
+    }
+
+    [Test]
     public Task Patch()
     {
         var xml =
