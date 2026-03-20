@@ -4,10 +4,10 @@ static class PatchHelper
         where T : IPatcher, new() =>
         Patch(new T(), xml);
 
-    public static XDocument Patch(IPatcher patcher, string xml)
+    public static XDocument Patch(IPatcher patcher, string xml, string entryName = "test")
     {
         var document = XDocument.Parse(xml);
-        patcher.PatchXml(document, "test");
+        patcher.PatchXml(document, entryName);
 
         return document;
     }

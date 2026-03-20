@@ -9,15 +9,16 @@ public static partial class DeterministicPackage
     {
         var workbookRelsPatcher = new WorkbookRelationshipPatcher();
         var documentRelsPatcher = new DocumentRelationshipPatcher();
+        var sheetRelsPatcher = new SheetRelationshipPatcher();
         return
         [
             new ContentTypesPatcher(),
             new RelationshipPatcher(),
-            new SheetPatcher(),
+            sheetRelsPatcher,
+            new SheetPatcher(sheetRelsPatcher),
             workbookRelsPatcher,
             new WorkbookPatcher(workbookRelsPatcher),
             new CorePatcher(),
-            new SheetRelationshipPatcher(),
             documentRelsPatcher,
             new DocumentPatcher(documentRelsPatcher),
             new NumberingPatcher()
