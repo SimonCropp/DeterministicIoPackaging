@@ -83,4 +83,120 @@ public class SheetPatcherTests
         var document = PatchHelper.Patch(new SheetPatcher(relsPatcher), xml, "xl/worksheets/sheet1.xml");
         return Verify(document);
     }
+
+    [Test]
+    public Task PatchWithDuplicateHyperlinkTargets()
+    {
+        // When multiple hyperlinks share the same target URL, the DeterministicId
+        // assignment must be normalized by cell reference to ensure determinism
+        // regardless of the original (non-deterministic) rId ordering.
+        var relsPatcher = new SheetRelationshipPatcher();
+        var relsXml =
+            """
+            <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+            <Relationships
+              xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+              <Relationship
+                Id="rId1"
+                Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"
+                Target="https://github.com"
+                TargetMode="External" />
+              <Relationship
+                Id="rId3"
+                Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"
+                Target="https://google.com"
+                TargetMode="External" />
+              <Relationship
+                Id="rId2"
+                Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"
+                Target="https://google.com"
+                TargetMode="External" />
+            </Relationships>
+            """;
+        PatchHelper.Patch(relsPatcher, relsXml, "xl/worksheets/_rels/sheet1.xml.rels");
+
+        // rId3 maps to E2, rId2 maps to B2.
+        // After rels renumbering: google.com gets DeterministicId2 and DeterministicId3
+        // (sorted by target, rId2 and rId3 are interchangeable).
+        // The normalization should ensure B2 always gets the lower DeterministicId.
+        var xml =
+            """
+            <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+            <worksheet
+                xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+                xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+              <sheetData>
+                <row r="2">
+                  <c r="B2" t="inlineStr"><is><t>Google</t></is></c>
+                  <c r="C2" t="inlineStr"><is><t>GitHub</t></is></c>
+                  <c r="E2" t="inlineStr"><is><t>Google Link</t></is></c>
+                </row>
+              </sheetData>
+              <hyperlinks>
+                <hyperlink ref="B2" r:id="rId2" display="Google" />
+                <hyperlink ref="C2" r:id="rId1" display="GitHub" />
+                <hyperlink ref="E2" r:id="rId3" display="Google Link" />
+              </hyperlinks>
+            </worksheet>
+            """;
+        var document = PatchHelper.Patch(new SheetPatcher(relsPatcher), xml, "xl/worksheets/sheet1.xml");
+        return Verify(document);
+    }
+
+    [Test]
+    public Task PatchWithDuplicateHyperlinkTargets_ReversedIds()
+    {
+        // Same scenario as above but with rId2 and rId3 swapped in the rels file.
+        // This simulates a different Aspose run where the IDs are assigned differently.
+        // The output must be identical to PatchWithDuplicateHyperlinkTargets.
+        var relsPatcher = new SheetRelationshipPatcher();
+        var relsXml =
+            """
+            <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+            <Relationships
+              xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+              <Relationship
+                Id="rId1"
+                Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"
+                Target="https://github.com"
+                TargetMode="External" />
+              <Relationship
+                Id="rId2"
+                Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"
+                Target="https://google.com"
+                TargetMode="External" />
+              <Relationship
+                Id="rId3"
+                Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"
+                Target="https://google.com"
+                TargetMode="External" />
+            </Relationships>
+            """;
+        PatchHelper.Patch(relsPatcher, relsXml, "xl/worksheets/_rels/sheet1.xml.rels");
+
+        // rId2 now maps to B2, rId3 maps to E2 (opposite of the other test).
+        // After normalization, the output should be identical.
+        var xml =
+            """
+            <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+            <worksheet
+                xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+                xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+              <sheetData>
+                <row r="2">
+                  <c r="B2" t="inlineStr"><is><t>Google</t></is></c>
+                  <c r="C2" t="inlineStr"><is><t>GitHub</t></is></c>
+                  <c r="E2" t="inlineStr"><is><t>Google Link</t></is></c>
+                </row>
+              </sheetData>
+              <hyperlinks>
+                <hyperlink ref="B2" r:id="rId3" display="Google" />
+                <hyperlink ref="C2" r:id="rId1" display="GitHub" />
+                <hyperlink ref="E2" r:id="rId2" display="Google Link" />
+              </hyperlinks>
+            </worksheet>
+            """;
+        var document = PatchHelper.Patch(new SheetPatcher(relsPatcher), xml, "xl/worksheets/sheet1.xml");
+        return Verify(document);
+    }
 }

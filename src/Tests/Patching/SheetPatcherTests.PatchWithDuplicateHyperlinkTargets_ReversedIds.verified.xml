@@ -1,0 +1,26 @@
+﻿<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <sheetData>
+    <row r="2">
+      <c r="B2" t="inlineStr">
+        <is>
+          <t>Google</t>
+        </is>
+      </c>
+      <c r="C2" t="inlineStr">
+        <is>
+          <t>GitHub</t>
+        </is>
+      </c>
+      <c r="E2" t="inlineStr">
+        <is>
+          <t>Google Link</t>
+        </is>
+      </c>
+    </row>
+  </sheetData>
+  <hyperlinks>
+    <hyperlink ref="B2" r:id="DeterministicId2" display="Google" />
+    <hyperlink ref="C2" r:id="DeterministicId1" display="GitHub" />
+    <hyperlink ref="E2" r:id="DeterministicId3" display="Google Link" />
+  </hyperlinks>
+</worksheet>
