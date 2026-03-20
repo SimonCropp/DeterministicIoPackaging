@@ -35,7 +35,52 @@ public class SheetPatcherTests
               <pageMargins left="0.75" right="0.75" top="1" bottom="1" header="0.5" footer="0.5"/>
             </worksheet>
             """;
-        var document = PatchHelper.Patch<SheetPatcher>(xml);
+        var document = PatchHelper.Patch(new SheetPatcher(new()), xml);
+        return Verify(document);
+    }
+
+    [Test]
+    public Task PatchWithHyperlinks()
+    {
+        var relsPatcher = new SheetRelationshipPatcher();
+        var relsXml =
+            """
+            <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+            <Relationships
+              xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+              <Relationship
+                Id="rId2"
+                Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"
+                Target="https://example.com"
+                TargetMode="External" />
+              <Relationship
+                Id="rId1"
+                Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"
+                Target="https://google.com"
+                TargetMode="External" />
+            </Relationships>
+            """;
+        PatchHelper.Patch(relsPatcher, relsXml, "xl/worksheets/_rels/sheet1.xml.rels");
+
+        var xml =
+            """
+            <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+            <worksheet
+                xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+                xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+              <sheetData>
+                <row r="1">
+                  <c r="A1" t="inlineStr"><is><t>Example</t></is></c>
+                  <c r="B1" t="inlineStr"><is><t>Google</t></is></c>
+                </row>
+              </sheetData>
+              <hyperlinks>
+                <hyperlink ref="A1" r:id="rId2" />
+                <hyperlink ref="B1" r:id="rId1" />
+              </hyperlinks>
+            </worksheet>
+            """;
+        var document = PatchHelper.Patch(new SheetPatcher(relsPatcher), xml, "xl/worksheets/sheet1.xml");
         return Verify(document);
     }
 }
