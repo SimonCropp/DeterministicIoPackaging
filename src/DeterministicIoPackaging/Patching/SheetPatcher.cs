@@ -88,16 +88,16 @@ class SheetPatcher(SheetRelationshipPatcher relsPatcher) : IPatcher
 
         // For each group, sort elements by a deterministic key (parent ref attribute, then element position)
         // and assign DeterministicIds in sorted order
-        foreach (var (target, attrs) in targetToElements)
+        foreach (var attributes in targetToElements.Values)
         {
-            if (attrs.Count <= 1)
+            if (attributes.Count <= 1)
             {
                 continue;
             }
 
             // Sort by the ref attribute of the parent element (cell reference like "B2"),
             // falling back to string comparison of the current r:id value
-            attrs.Sort((a, b) =>
+            attributes.Sort((a, b) =>
             {
                 var refA = a.Parent?.Attribute("ref")?.Value ?? "";
                 var refB = b.Parent?.Attribute("ref")?.Value ?? "";
@@ -106,12 +106,12 @@ class SheetPatcher(SheetRelationshipPatcher relsPatcher) : IPatcher
             });
 
             // Collect and sort the DeterministicIds
-            var sortedIds = attrs.Select(_ => _.Value).Order(StringComparer.Ordinal).ToList();
+            var sortedIds = attributes.Select(_ => _.Value).Order(StringComparer.Ordinal).ToList();
 
             // Assign in order
-            for (var i = 0; i < attrs.Count; i++)
+            for (var i = 0; i < attributes.Count; i++)
             {
-                attrs[i].SetValue(sortedIds[i]);
+                attributes[i].SetValue(sortedIds[i]);
             }
         }
     }
