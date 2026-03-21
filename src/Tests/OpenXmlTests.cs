@@ -138,6 +138,179 @@ public class OpenXmlTests
         return stream;
     }
 
+    [Test]
+    public void FooterHyperlinkIdsAreDeterministic()
+    {
+        var docxStream = CreateDocxWithFooterHyperlink();
+        var result = DeterministicPackage.Convert(docxStream);
+
+        result.Position = 0;
+        using var archive = new Archive(result, ZipArchiveMode.Read);
+
+        // Check all .rels files have deterministic IDs
+        foreach (var entry in archive.Entries.Where(_ => _.FullName.EndsWith(".rels")))
+        {
+            using var entryStream = entry.Open();
+            var xml = XDocument.Load(entryStream);
+            var ids = xml.Root!.Elements()
+                .Select(_ => _.Attribute("Id")?.Value)
+                .Where(_ => _ != null)
+                .ToList();
+
+            foreach (var id in ids)
+            {
+                Assert.That(id, Does.StartWith("DeterministicId"),
+                    $"Entry '{entry.FullName}' has non-deterministic relationship Id '{id}'");
+            }
+        }
+    }
+
+    [Test]
+    public void FooterHyperlinkBinaryEquality()
+    {
+        // Create two docx files with the same content but different random relationship IDs
+        using var stream1 = DeterministicPackage.Convert(CreateDocxWithFooterHyperlink());
+        using var stream2 = DeterministicPackage.Convert(CreateDocxWithFooterHyperlink());
+
+        var bytes1 = stream1.ToArray();
+        var bytes2 = stream2.ToArray();
+
+        Assert.That(bytes1, Is.EqualTo(bytes2));
+    }
+
+    [Test]
+    public Task FooterHyperlinkDocx()
+    {
+        var docxStream = CreateDocxWithFooterHyperlink();
+        var result = DeterministicPackage.Convert(docxStream);
+
+        return Verify(result, extension: "docx")
+            .UniqueForRuntime();
+    }
+
+    [Test]
+    public Task FooterHyperlinkZip()
+    {
+        var docxStream = CreateDocxWithFooterHyperlink();
+        var result = DeterministicPackage.Convert(docxStream);
+
+        return VerifyZip(result);
+    }
+
+    [Test]
+    public void HeaderRelIdsAreRemappedInContent()
+    {
+        var docxStream = CreateDocxWithHeaderHyperlink();
+        var result = DeterministicPackage.Convert(docxStream);
+
+        result.Position = 0;
+        using var archive = new Archive(result, ZipArchiveMode.Read);
+
+        // Get the relationship IDs from header .rels
+        var headerRelsEntry = archive.Entries
+            .FirstOrDefault(_ => _.FullName.StartsWith("word/_rels/header") && _.FullName.EndsWith(".rels"));
+        Assert.That(headerRelsEntry, Is.Not.Null, "Header .rels entry should exist");
+
+        using var relsStream = headerRelsEntry!.Open();
+        var relsXml = XDocument.Load(relsStream);
+        var relIds = relsXml.Root!.Elements()
+            .Select(_ => _.Attribute("Id")!.Value)
+            .ToList();
+
+        // Get r:id references from header XML
+        var headerEntry = archive.Entries
+            .FirstOrDefault(_ => _.FullName.StartsWith("word/header") && _.FullName.EndsWith(".xml") && !_.FullName.Contains("_rels"));
+        Assert.That(headerEntry, Is.Not.Null, "Header XML entry should exist");
+
+        using var headerStream = headerEntry!.Open();
+        var headerXml = XDocument.Load(headerStream);
+        XNamespace r = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+        var rIdRefs = headerXml.Descendants().Attributes(r + "id")
+            .Select(_ => _.Value)
+            .ToList();
+
+        // Every r:id in header content must match a .rels ID
+        foreach (var rIdRef in rIdRefs)
+        {
+            Assert.That(relIds, Does.Contain(rIdRef),
+                $"r:id=\"{rIdRef}\" in header XML has no matching relationship ID in header .rels");
+        }
+    }
+
+    static MemoryStream CreateDocxWithFooterHyperlink()
+    {
+        var stream = new MemoryStream();
+        using (var document = WordprocessingDocument.Create(stream, WordprocessingDocumentType.Document))
+        {
+            var mainPart = document.AddMainDocumentPart();
+
+            // Create footer with hyperlink
+            var footerPart = mainPart.AddNewPart<FooterPart>();
+            var hyperlinkRel = footerPart.AddHyperlinkRelationship(new Uri("https://example.com"), true);
+            var footer = new W.Footer(
+                new W.Paragraph(
+                    new W.Hyperlink(
+                        new W.Run(
+                            new W.Text("Example Link") { Space = SpaceProcessingModeValues.Preserve }))
+                    {
+                        Id = hyperlinkRel.Id
+                    }));
+            footerPart.Footer = footer;
+
+            var body = new W.Body(
+                new W.Paragraph(
+                    new W.Run(
+                        new W.Text("Body content") { Space = SpaceProcessingModeValues.Preserve })),
+                new W.SectionProperties(
+                    new W.FooterReference
+                    {
+                        Type = W.HeaderFooterValues.Default,
+                        Id = mainPart.GetIdOfPart(footerPart)
+                    }));
+            mainPart.Document = new W.Document(body);
+        }
+
+        stream.Position = 0;
+        return stream;
+    }
+
+    static MemoryStream CreateDocxWithHeaderHyperlink()
+    {
+        var stream = new MemoryStream();
+        using (var document = WordprocessingDocument.Create(stream, WordprocessingDocumentType.Document))
+        {
+            var mainPart = document.AddMainDocumentPart();
+
+            // Create header with hyperlink
+            var headerPart = mainPart.AddNewPart<HeaderPart>();
+            var hyperlinkRel = headerPart.AddHyperlinkRelationship(new Uri("https://example.com/header"), true);
+            var header = new W.Header(
+                new W.Paragraph(
+                    new W.Hyperlink(
+                        new W.Run(
+                            new W.Text("Header Link") { Space = SpaceProcessingModeValues.Preserve }))
+                    {
+                        Id = hyperlinkRel.Id
+                    }));
+            headerPart.Header = header;
+
+            var body = new W.Body(
+                new W.Paragraph(
+                    new W.Run(
+                        new W.Text("Body content") { Space = SpaceProcessingModeValues.Preserve })),
+                new W.SectionProperties(
+                    new W.HeaderReference
+                    {
+                        Type = W.HeaderFooterValues.Default,
+                        Id = mainPart.GetIdOfPart(headerPart)
+                    }));
+            mainPart.Document = new W.Document(body);
+        }
+
+        stream.Position = 0;
+        return stream;
+    }
+
     static MemoryStream CreateSpreadsheet()
     {
         var stream = new MemoryStream();
