@@ -2,6 +2,8 @@ static class RelationshipRenumber
 {
     static XNamespace r = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
     static XName rId = r + "id";
+    static XName rEmbed = r + "embed";
+    static XName rLink = r + "link";
 
     public static Dictionary<string, string> RenumberAndSort(XDocument xml, string? entryName = null)
     {
@@ -64,22 +66,27 @@ static class RelationshipRenumber
             {
                 targetAttr.SetValue(target[basePath.Length..]);
             }
-            else
-            {
-                // Absolute path doesn't match base — just strip the leading /
-                targetAttr.SetValue(target[1..]);
-            }
+            // else: absolute path points outside base directory — keep as-is
+            // (stripping the leading / would create a broken relative path)
         }
     }
 
     public static void RemapIds(XDocument xml, Dictionary<string, string> mapping)
     {
-        foreach (var attr in xml.Descendants().Attributes(rId))
+        foreach (var descendant in xml.Descendants())
         {
-            if (mapping.TryGetValue(attr.Value, out var newId))
-            {
-                attr.SetValue(newId);
-            }
+            RemapAttribute(descendant, rId, mapping);
+            RemapAttribute(descendant, rEmbed, mapping);
+            RemapAttribute(descendant, rLink, mapping);
+        }
+    }
+
+    static void RemapAttribute(XElement element, XName name, Dictionary<string, string> mapping)
+    {
+        var attr = element.Attribute(name);
+        if (attr != null && mapping.TryGetValue(attr.Value, out var newId))
+        {
+            attr.SetValue(newId);
         }
     }
 }
