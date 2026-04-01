@@ -1,4 +1,7 @@
-﻿[TestFixture]
+﻿using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Validation;
+
+[TestFixture]
 public class Tests
 {
     [Test]
@@ -177,6 +180,66 @@ public class Tests
             Assert.That(elements[i].ToString(), Is.EqualTo(sorted[i].ToString()),
                 $"[Content_Types].xml element at index {i} is not in sorted order");
         }
+    }
+
+    [Test]
+    public void ValidateDocx()
+    {
+        var file = Path.Combine(directory, "sample.docx");
+        AssertNoNewValidationErrors(file, () => WordprocessingDocument.Open);
+    }
+
+    [Test]
+    public void ValidateXlsx()
+    {
+        var file = Path.Combine(directory, "sample.xlsx");
+        AssertNoNewValidationErrors(file, () => SpreadsheetDocument.Open);
+    }
+
+    [Test]
+    public void ValidateNumberingDocx()
+    {
+        var file = Path.Combine(directory, "samples.numbering1_1.docx");
+        AssertNoNewValidationErrors(file, () => WordprocessingDocument.Open);
+    }
+
+    [Test]
+    public void ValidateAbsPathXlsx()
+    {
+        var file = Path.Combine(directory, "sample.WithAbsPath.xlsx");
+        AssertNoNewValidationErrors(file, () => SpreadsheetDocument.Open);
+    }
+
+    [Test]
+    public void ValidateWithWorkbookRelsXlsx()
+    {
+        var file = Path.Combine(directory, "sample.WithWorkbookRels.xlsx");
+        AssertNoNewValidationErrors(file, () => SpreadsheetDocument.Open);
+    }
+
+    static void AssertNoNewValidationErrors(string file, Func<Func<Stream, bool, OpenXmlPackage>> openFactory)
+    {
+        var open = openFactory();
+        var validator = new OpenXmlValidator();
+
+        // Validate source
+        using var sourceStream = File.OpenRead(file);
+        using var sourceDoc = open(sourceStream, false);
+        var sourceErrors = validator.Validate(sourceDoc)
+            .Select(_ => _.Description)
+            .ToHashSet();
+
+        // Validate converted
+        var convertedStream = Convert(file);
+        convertedStream.Position = 0;
+        using var convertedDoc = open(convertedStream, false);
+        var newErrors = validator.Validate(convertedDoc)
+            .Where(_ => !sourceErrors.Contains(_.Description))
+            .ToList();
+
+        Assert.That(newErrors, Is.Empty,
+            "Conversion introduced new validation errors: " +
+            string.Join(Environment.NewLine, newErrors.Select(_ => $"{_.Description} ({_.Path})")));
     }
 
     [Test]

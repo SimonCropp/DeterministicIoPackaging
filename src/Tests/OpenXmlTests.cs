@@ -1,6 +1,7 @@
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
+using DocumentFormat.OpenXml.Validation;
 using W = DocumentFormat.OpenXml.Wordprocessing;
 using A = DocumentFormat.OpenXml.Drawing;
 using DW = DocumentFormat.OpenXml.Drawing.Wordprocessing;
@@ -354,6 +355,66 @@ public class OpenXmlTests
 
         stream.Position = 0;
         return stream;
+    }
+
+    [Test]
+    public void ValidateConvertedSpreadsheet()
+    {
+        var stream = CreateSpreadsheet();
+        var result = DeterministicPackage.Convert(stream);
+        result.Position = 0;
+
+        using var document = SpreadsheetDocument.Open(result, false);
+        var validator = new OpenXmlValidator();
+        var errors = validator.Validate(document).ToList();
+
+        Assert.That(errors, Is.Empty,
+            string.Join(Environment.NewLine, errors.Select(_ => $"{_.Description} ({_.Path})")));
+    }
+
+    [Test]
+    public void ValidateConvertedDocxWithSvg()
+    {
+        var stream = CreateDocxWithSvg();
+        var result = DeterministicPackage.Convert(stream);
+        result.Position = 0;
+
+        using var document = WordprocessingDocument.Open(result, false);
+        var validator = new OpenXmlValidator();
+        var errors = validator.Validate(document).ToList();
+
+        Assert.That(errors, Is.Empty,
+            string.Join(Environment.NewLine, errors.Select(_ => $"{_.Description} ({_.Path})")));
+    }
+
+    [Test]
+    public void ValidateConvertedDocxWithFooterHyperlink()
+    {
+        var stream = CreateDocxWithFooterHyperlink();
+        var result = DeterministicPackage.Convert(stream);
+        result.Position = 0;
+
+        using var document = WordprocessingDocument.Open(result, false);
+        var validator = new OpenXmlValidator();
+        var errors = validator.Validate(document).ToList();
+
+        Assert.That(errors, Is.Empty,
+            string.Join(Environment.NewLine, errors.Select(_ => $"{_.Description} ({_.Path})")));
+    }
+
+    [Test]
+    public void ValidateConvertedDocxWithHeaderHyperlink()
+    {
+        var stream = CreateDocxWithHeaderHyperlink();
+        var result = DeterministicPackage.Convert(stream);
+        result.Position = 0;
+
+        using var document = WordprocessingDocument.Open(result, false);
+        var validator = new OpenXmlValidator();
+        var errors = validator.Validate(document).ToList();
+
+        Assert.That(errors, Is.Empty,
+            string.Join(Environment.NewLine, errors.Select(_ => $"{_.Description} ({_.Path})")));
     }
 
     static Cell CreateCell(string reference, string value) =>
