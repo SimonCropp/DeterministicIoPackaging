@@ -11,6 +11,7 @@ public static partial class DeterministicPackage
         var documentRelsPatcher = new DocumentRelationshipPatcher();
         var sheetRelsPatcher = new SheetRelationshipPatcher();
         var wordPartRelsPatcher = new WordPartRelationshipPatcher();
+        var pptxRelsPatcher = new PptxRelationshipPatcher();
         return
         [
             new ContentTypesPatcher(),
@@ -24,6 +25,8 @@ public static partial class DeterministicPackage
             new DocumentPatcher(documentRelsPatcher),
             wordPartRelsPatcher,
             new WordPartPatcher(wordPartRelsPatcher),
+            pptxRelsPatcher,
+            new PptxContentPatcher(pptxRelsPatcher),
             new NumberingPatcher()
         ];
     }
