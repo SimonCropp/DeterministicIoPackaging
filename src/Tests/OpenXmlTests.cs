@@ -403,6 +403,126 @@ public class OpenXmlTests
     }
 
     [Test]
+    public void RevisionMarkersAreStripped()
+    {
+        var docxStream = CreateDocxWithRevisionMarkers();
+        var result = DeterministicPackage.Convert(docxStream);
+
+        result.Position = 0;
+        using var archive = new Archive(result, ZipArchiveMode.Read);
+
+        XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+        XNamespace w14 = "http://schemas.microsoft.com/office/word/2010/wordml";
+        var attributesToCheck = new[]
+        {
+            w14 + "paraId",
+            w14 + "textId",
+            w + "rsidR",
+            w + "rsidRPr",
+            w + "rsidP",
+            w + "rsidRDefault",
+            w + "rsidDel",
+            w + "rsidTr",
+            w + "rsidSect"
+        };
+
+        foreach (var entry in archive.Entries.Where(_ =>
+            _.FullName.StartsWith("word/") &&
+            _.FullName.EndsWith(".xml") &&
+            !_.FullName.Contains("/_rels/")))
+        {
+            using var stream = entry.Open();
+            var xml = XDocument.Load(stream);
+            foreach (var attrName in attributesToCheck)
+            {
+                var found = xml.Descendants().Attributes(attrName).FirstOrDefault();
+                Assert.That(found, Is.Null,
+                    $"Entry '{entry.FullName}' still contains attribute '{attrName}'");
+            }
+        }
+    }
+
+    [Test]
+    public void RevisionMarkersBinaryEquality()
+    {
+        // Two builds with different random rsids/paraIds must produce identical bytes
+        using var stream1 = DeterministicPackage.Convert(CreateDocxWithRevisionMarkers());
+        using var stream2 = DeterministicPackage.Convert(CreateDocxWithRevisionMarkers());
+
+        var bytes1 = stream1.ToArray();
+        var bytes2 = stream2.ToArray();
+
+        Assert.That(bytes1, Is.EqualTo(bytes2));
+    }
+
+    static MemoryStream CreateDocxWithRevisionMarkers()
+    {
+        var stream = new MemoryStream();
+        using (var document = WordprocessingDocument.Create(stream, WordprocessingDocumentType.Document))
+        {
+            var mainPart = document.AddMainDocumentPart();
+
+            // Header with revision markers
+            var headerPart = mainPart.AddNewPart<HeaderPart>();
+            headerPart.Header = new W.Header(
+                new W.Paragraph(
+                    new W.Run(
+                        new W.Text("Header") { Space = SpaceProcessingModeValues.Preserve }))
+                {
+                    ParagraphId = RandomHex8(),
+                    TextId = RandomHex8(),
+                    RsidParagraphAddition = RandomHex8()
+                });
+
+            // Footer with revision markers
+            var footerPart = mainPart.AddNewPart<FooterPart>();
+            footerPart.Footer = new W.Footer(
+                new W.Paragraph(
+                    new W.Run(
+                        new W.Text("Footer") { Space = SpaceProcessingModeValues.Preserve }))
+                {
+                    ParagraphId = RandomHex8(),
+                    TextId = RandomHex8(),
+                    RsidParagraphAddition = RandomHex8()
+                });
+
+            // Body with revision markers on paragraph and section properties
+            var body = new W.Body(
+                new W.Paragraph(
+                    new W.Run(
+                        new W.Text("Body") { Space = SpaceProcessingModeValues.Preserve }))
+                {
+                    ParagraphId = RandomHex8(),
+                    TextId = RandomHex8(),
+                    RsidParagraphAddition = RandomHex8(),
+                    RsidParagraphProperties = RandomHex8(),
+                    RsidRunAdditionDefault = RandomHex8()
+                },
+                new W.SectionProperties(
+                    new W.HeaderReference
+                    {
+                        Type = W.HeaderFooterValues.Default,
+                        Id = mainPart.GetIdOfPart(headerPart)
+                    },
+                    new W.FooterReference
+                    {
+                        Type = W.HeaderFooterValues.Default,
+                        Id = mainPart.GetIdOfPart(footerPart)
+                    })
+                {
+                    RsidSect = RandomHex8()
+                });
+            mainPart.Document = new(body);
+        }
+
+        stream.Position = 0;
+        return stream;
+    }
+
+    static string RandomHex8() =>
+        Random.Shared.Next().ToString("X8");
+
+    [Test]
     public void ValidateConvertedDocxWithHeaderHyperlink()
     {
         var stream = CreateDocxWithHeaderHyperlink();
