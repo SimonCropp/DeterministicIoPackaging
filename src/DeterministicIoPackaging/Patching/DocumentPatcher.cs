@@ -12,6 +12,8 @@ class DocumentPatcher(DocumentRelationshipPatcher relsPatcher) : IPatcher
     {
         var root = xml.Root!;
 
+        WordRevisionMarkers.Strip(xml);
+
         // Find all elements with id attributes that need normalization
         var elementsWithIds = new List<XElement>();
         elementsWithIds.AddRange(root.Descendants(wpDocPr));
