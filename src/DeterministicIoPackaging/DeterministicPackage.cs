@@ -81,7 +81,7 @@ public static partial class DeterministicPackage
             return;
         }
 
-        sourceStream.CopyTo(targetStream);
+        CopyOrRecurseZip(sourceStream, targetStream);
     }
 
     static async Task DuplicateEntryAsync(Entry sourceEntry, Archive targetArchive, IReadOnlyList<IPatcher> currentPatchers, Cancel cancel)
@@ -121,7 +121,7 @@ public static partial class DeterministicPackage
             return;
         }
 
-        await sourceStream.CopyToAsync(targetStream, cancel);
+        await CopyOrRecurseZipAsync(sourceStream, targetStream, cancel);
     }
 
     static bool IsSpreadsheetXml(Entry entry) =>

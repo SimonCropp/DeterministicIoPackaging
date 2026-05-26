@@ -546,6 +546,67 @@ public class OpenXmlTests
         };
 
     [Test]
+    public void NestedZipIsRecursivelyNormalized()
+    {
+        // Builds two outer packages that each contain a nested .zip entry whose
+        // only difference is the inner entry's LastWriteTime — a known source of
+        // zip-level non-determinism that the original CopyTo path missed,
+        // because nested packages were never re-normalized.
+        //
+        // Regression test for: snapshots changing on every test run because the
+        // .xlsx Syncfusion embeds inside .docx via word/embeddings/*.xlsx is itself
+        // a non-deterministic zip that was passed through verbatim.
+        var outer1 = BuildOuterWithNestedZip(new(2020, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        var outer2 = BuildOuterWithNestedZip(new(2024, 6, 15, 12, 30, 0, TimeSpan.Zero));
+
+        using var converted1 = DeterministicPackage.Convert(outer1);
+        using var converted2 = DeterministicPackage.Convert(outer2);
+
+        Assert.That(converted1.ToArray(), Is.EqualTo(converted2.ToArray()));
+    }
+
+    [Test]
+    public async Task NestedZipIsRecursivelyNormalizedAsync()
+    {
+        var outer1 = BuildOuterWithNestedZip(new(2020, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        var outer2 = BuildOuterWithNestedZip(new(2024, 6, 15, 12, 30, 0, TimeSpan.Zero));
+
+        using var converted1 = await DeterministicPackage.ConvertAsync(outer1);
+        using var converted2 = await DeterministicPackage.ConvertAsync(outer2);
+
+        Assert.That(converted1.ToArray(), Is.EqualTo(converted2.ToArray()));
+    }
+
+    static MemoryStream BuildOuterWithNestedZip(DateTimeOffset nestedLastWrite)
+    {
+        // Build a nested zip with a single payload entry whose LastWriteTime varies.
+        var nested = new MemoryStream();
+        using (var archive = new Archive(nested, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            var entry = archive.CreateEntry("payload.txt");
+            entry.LastWriteTime = nestedLastWrite;
+            using var es = entry.Open();
+            var bytes = "hello world from nested zip"u8.ToArray();
+            es.Write(bytes, 0, bytes.Length);
+        }
+
+        // Wrap the nested zip inside an outer zip. The outer entry "nested.zip"
+        // contains arbitrary binary that happens to be itself a zip package.
+        var outer = new MemoryStream();
+        using (var archive = new Archive(outer, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            var entry = archive.CreateEntry("word/embeddings/nested.zip");
+            entry.LastWriteTime = new DateTimeOffset(2020, 1, 1, 0, 0, 0, TimeSpan.Zero);
+            using var es = entry.Open();
+            nested.Position = 0;
+            nested.CopyTo(es);
+        }
+
+        outer.Position = 0;
+        return outer;
+    }
+
+    [Test]
     public Task ConvertedPptx()
     {
         var pptxStream = CreatePresentation();
