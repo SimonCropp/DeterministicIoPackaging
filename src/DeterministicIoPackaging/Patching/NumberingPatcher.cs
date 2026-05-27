@@ -1,5 +1,7 @@
-class NumberingPatcher : IPatcher
+class NumberingPatcher : IExactMatchPatcher
 {
+    public string ExactMatch => "word/numbering.xml";
+
     static XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
     static XName nsid = w + "nsid";
     static XName abstractNum = w + "abstractNum";
@@ -88,18 +90,26 @@ class NumberingPatcher : IPatcher
     static void RemoveRedundantNamespaceDeclarations(XElement root)
     {
         // Get the default namespace from the root
-        var defaultNs = root.GetDefaultNamespace();
+        var defaultNsName = root.GetDefaultNamespace().NamespaceName;
 
+        // Walk attributes via the linked-list to avoid allocating a Where
+        // iterator and a List<XAttribute> for every element.
         foreach (var element in root.DescendantsAndSelf())
         {
-            // Find namespace attributes that declare the same URI as the default namespace
-            element.Attributes()
-                .Where(_ => _.IsNamespaceDeclaration &&
-                            _.Value == defaultNs.NamespaceName &&
-                            // Don't remove the default namespace declaration itself
-                            _.Name.LocalName != "xmlns")
-                .ToList()
-                .Remove();
+            var attr = element.FirstAttribute;
+            while (attr != null)
+            {
+                var next = attr.NextAttribute;
+                if (attr.IsNamespaceDeclaration &&
+                    attr.Value == defaultNsName &&
+                    // Don't remove the default namespace declaration itself
+                    attr.Name.LocalName != "xmlns")
+                {
+                    attr.Remove();
+                }
+
+                attr = next;
+            }
         }
     }
 }

@@ -64,7 +64,7 @@ public class OpenXmlTests
             .UniqueForRuntime();
     }
 
-    internal static MemoryStream CreateDocxWithSvg()
+    static MemoryStream CreateDocxWithSvg()
     {
         var stream = new MemoryStream();
         using (var document = WordprocessingDocument.Create(stream, WordprocessingDocumentType.Document))
@@ -89,7 +89,10 @@ public class OpenXmlTests
             }
 
             // Build blip with SVG extension
-            var blip = new A.Blip { Embed = "rPng1" };
+            var blip = new A.Blip
+            {
+                Embed = "rPng1"
+            };
             var svgBlipElement = new OpenXmlUnknownElement("asvg", "svgBlip", "http://schemas.microsoft.com/office/drawing/2016/SVG/main");
             svgBlipElement.SetAttribute(new("r", "embed", "http://schemas.openxmlformats.org/officeDocument/2006/relationships", "rSvg1"));
             var ext = new OpenXmlUnknownElement("a", "ext", "http://schemas.openxmlformats.org/drawingml/2006/main");
@@ -101,21 +104,46 @@ public class OpenXmlTests
 
             var drawing = new W.Drawing(
                 new DW.Inline(
-                    new DW.Extent { Cx = 952500, Cy = 952500 },
-                    new DW.DocProperties { Id = 1U, Name = "Image" },
+                    new DW.Extent
+                    {
+                        Cx = 952500,
+                        Cy = 952500
+                    },
+                    new DW.DocProperties
+                    {
+                        Id = 1U,
+                        Name = "Image"
+                    },
                     new A.Graphic(
                         new A.GraphicData(
                             new PIC.Picture(
                                 new PIC.NonVisualPictureProperties(
-                                    new PIC.NonVisualDrawingProperties { Id = 0U, Name = "Image" },
+                                    new PIC.NonVisualDrawingProperties
+                                    {
+                                        Id = 0U,
+                                        Name = "Image"
+                                    },
                                     new PIC.NonVisualPictureDrawingProperties()),
                                 new PIC.BlipFill(blip, new A.Stretch(new A.FillRectangle())),
                                 new PIC.ShapeProperties(
                                     new A.Transform2D(
-                                        new A.Offset { X = 0, Y = 0 },
-                                        new A.Extents { Cx = 952500, Cy = 952500 }),
-                                    new A.PresetGeometry(new A.AdjustValueList()) { Preset = A.ShapeTypeValues.Rectangle })))
-                        { Uri = "http://schemas.openxmlformats.org/drawingml/2006/picture" })
+                                        new A.Offset
+                                        {
+                                            X = 0,
+                                            Y = 0
+                                        },
+                                        new A.Extents
+                                        {
+                                            Cx = 952500,
+                                            Cy = 952500
+                                        }),
+                                    new A.PresetGeometry(new A.AdjustValueList())
+                                    {
+                                        Preset = A.ShapeTypeValues.Rectangle
+                                    })))
+                        {
+                            Uri = "http://schemas.openxmlformats.org/drawingml/2006/picture"
+                        })
                 )
                 {
                     DistanceFromTop = 0U,
@@ -127,11 +155,17 @@ public class OpenXmlTests
             var body = new W.Body(
                 new W.Paragraph(
                     new W.Run(
-                        new W.Text("Before SVG") { Space = SpaceProcessingModeValues.Preserve })),
+                        new W.Text("Before SVG")
+                        {
+                            Space = SpaceProcessingModeValues.Preserve
+                        })),
                 new W.Paragraph(new W.Run(drawing)),
                 new W.Paragraph(
                     new W.Run(
-                        new W.Text("After SVG") { Space = SpaceProcessingModeValues.Preserve })));
+                        new W.Text("After SVG")
+                        {
+                            Space = SpaceProcessingModeValues.Preserve
+                        })));
             mainPart.Document = new(body);
         }
 
@@ -220,13 +254,17 @@ public class OpenXmlTests
 
         // Get r:id references from header XML
         var headerEntry = archive.Entries
-            .FirstOrDefault(_ => _.FullName.StartsWith("word/header") && _.FullName.EndsWith(".xml") && !_.FullName.Contains("_rels"));
+            .FirstOrDefault(_ => _.FullName.StartsWith("word/header") &&
+                                 _.FullName.EndsWith(".xml") &&
+                                 !_.FullName.Contains("_rels"));
         Assert.That(headerEntry, Is.Not.Null, "Header XML entry should exist");
 
         using var headerStream = headerEntry!.Open();
         var headerXml = XDocument.Load(headerStream);
         XNamespace r = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
-        var rIdRefs = headerXml.Descendants().Attributes(r + "id")
+        var rIdRefs = headerXml
+            .Descendants()
+            .Attributes(r + "id")
             .Select(_ => _.Value)
             .ToList();
 
@@ -252,7 +290,10 @@ public class OpenXmlTests
                 new W.Paragraph(
                     new W.Hyperlink(
                         new W.Run(
-                            new W.Text("Example Link") { Space = SpaceProcessingModeValues.Preserve }))
+                            new W.Text("Example Link")
+                            {
+                                Space = SpaceProcessingModeValues.Preserve
+                            }))
                     {
                         Id = hyperlinkRel.Id
                     }));
@@ -261,7 +302,10 @@ public class OpenXmlTests
             var body = new W.Body(
                 new W.Paragraph(
                     new W.Run(
-                        new W.Text("Body content") { Space = SpaceProcessingModeValues.Preserve })),
+                        new W.Text("Body content")
+                        {
+                            Space = SpaceProcessingModeValues.Preserve
+                        })),
                 new W.SectionProperties(
                     new W.FooterReference
                     {
@@ -289,7 +333,10 @@ public class OpenXmlTests
                 new W.Paragraph(
                     new W.Hyperlink(
                         new W.Run(
-                            new W.Text("Header Link") { Space = SpaceProcessingModeValues.Preserve }))
+                            new W.Text("Header Link")
+                            {
+                                Space = SpaceProcessingModeValues.Preserve
+                            }))
                     {
                         Id = hyperlinkRel.Id
                     }));
@@ -298,7 +345,10 @@ public class OpenXmlTests
             var body = new W.Body(
                 new W.Paragraph(
                     new W.Run(
-                        new W.Text("Body content") { Space = SpaceProcessingModeValues.Preserve })),
+                        new W.Text("Body content")
+                        {
+                            Space = SpaceProcessingModeValues.Preserve
+                        })),
                 new W.SectionProperties(
                     new W.HeaderReference
                     {
@@ -335,19 +385,31 @@ public class OpenXmlTests
             stylesPart.Stylesheet = new(
                 new Fonts(new Font()),
                 new Fills(
-                    new Fill(new PatternFill { PatternType = PatternValues.None }),
-                    new Fill(new PatternFill { PatternType = PatternValues.Gray125 })),
+                    new Fill(new PatternFill
+                    {
+                        PatternType = PatternValues.None
+                    }),
+                    new Fill(new PatternFill
+                    {
+                        PatternType = PatternValues.Gray125
+                    })),
                 new Borders(new Border()),
                 new CellFormats(new CellFormat()));
 
             var sheetData = worksheetPart.Worksheet.GetFirstChild<SheetData>()!;
 
-            var headerRow = new Row { RowIndex = 1 };
+            var headerRow = new Row
+            {
+                RowIndex = 1
+            };
             headerRow.Append(CreateCell("A1", "Name"));
             headerRow.Append(CreateCell("B1", "Value"));
             sheetData.Append(headerRow);
 
-            var dataRow = new Row { RowIndex = 2 };
+            var dataRow = new Row
+            {
+                RowIndex = 2
+            };
             dataRow.Append(CreateCell("A2", "Test"));
             dataRow.Append(CreateCell("B2", "123"));
             sheetData.Append(dataRow);
@@ -426,10 +488,11 @@ public class OpenXmlTests
             w + "rsidSect"
         };
 
-        foreach (var entry in archive.Entries.Where(_ =>
-            _.FullName.StartsWith("word/") &&
-            _.FullName.EndsWith(".xml") &&
-            !_.FullName.Contains("/_rels/")))
+        foreach (var entry in archive.Entries
+                     .Where(_ =>
+                         _.FullName.StartsWith("word/") &&
+                         _.FullName.EndsWith(".xml") &&
+                         !_.FullName.Contains("/_rels/")))
         {
             using var stream = entry.Open();
             var xml = XDocument.Load(stream);
@@ -464,10 +527,13 @@ public class OpenXmlTests
 
             // Header with revision markers
             var headerPart = mainPart.AddNewPart<HeaderPart>();
-            headerPart.Header = new W.Header(
+            headerPart.Header = new(
                 new W.Paragraph(
                     new W.Run(
-                        new W.Text("Header") { Space = SpaceProcessingModeValues.Preserve }))
+                        new W.Text("Header")
+                        {
+                            Space = SpaceProcessingModeValues.Preserve
+                        }))
                 {
                     ParagraphId = RandomHex8(),
                     TextId = RandomHex8(),
@@ -476,10 +542,13 @@ public class OpenXmlTests
 
             // Footer with revision markers
             var footerPart = mainPart.AddNewPart<FooterPart>();
-            footerPart.Footer = new W.Footer(
+            footerPart.Footer = new(
                 new W.Paragraph(
                     new W.Run(
-                        new W.Text("Footer") { Space = SpaceProcessingModeValues.Preserve }))
+                        new W.Text("Footer")
+                        {
+                            Space = SpaceProcessingModeValues.Preserve
+                        }))
                 {
                     ParagraphId = RandomHex8(),
                     TextId = RandomHex8(),
@@ -490,7 +559,10 @@ public class OpenXmlTests
             var body = new W.Body(
                 new W.Paragraph(
                     new W.Run(
-                        new W.Text("Body") { Space = SpaceProcessingModeValues.Preserve }))
+                        new W.Text("Body")
+                        {
+                            Space = SpaceProcessingModeValues.Preserve
+                        }))
                 {
                     ParagraphId = RandomHex8(),
                     TextId = RandomHex8(),
@@ -596,7 +668,7 @@ public class OpenXmlTests
         using (var archive = new Archive(outer, ZipArchiveMode.Create, leaveOpen: true))
         {
             var entry = archive.CreateEntry("word/embeddings/nested.zip");
-            entry.LastWriteTime = new DateTimeOffset(2020, 1, 1, 0, 0, 0, TimeSpan.Zero);
+            entry.LastWriteTime = new(2020, 1, 1, 0, 0, 0, TimeSpan.Zero);
             using var es = entry.Open();
             nested.Position = 0;
             nested.CopyTo(es);
@@ -652,7 +724,7 @@ public class OpenXmlTests
             string.Join(Environment.NewLine, errors.Select(_ => $"{_.Description} ({_.Path})")));
     }
 
-    internal static MemoryStream CreatePresentation()
+    static MemoryStream CreatePresentation()
     {
         var stream = new MemoryStream();
         using (var document = PresentationDocument.Create(stream, PresentationDocumentType.Presentation))
@@ -665,56 +737,211 @@ public class OpenXmlTests
             themePart.Theme = new(
                 new A.ThemeElements(
                     new A.ColorScheme(
-                        new A.Dark1Color(new A.SystemColor { Val = A.SystemColorValues.WindowText, LastColor = "000000" }),
-                        new A.Light1Color(new A.SystemColor { Val = A.SystemColorValues.Window, LastColor = "FFFFFF" }),
-                        new A.Dark2Color(new A.RgbColorModelHex { Val = "1F497D" }),
-                        new A.Light2Color(new A.RgbColorModelHex { Val = "EEECE1" }),
-                        new A.Accent1Color(new A.RgbColorModelHex { Val = "4F81BD" }),
-                        new A.Accent2Color(new A.RgbColorModelHex { Val = "C0504D" }),
-                        new A.Accent3Color(new A.RgbColorModelHex { Val = "9BBB59" }),
-                        new A.Accent4Color(new A.RgbColorModelHex { Val = "8064A2" }),
-                        new A.Accent5Color(new A.RgbColorModelHex { Val = "4BACC6" }),
-                        new A.Accent6Color(new A.RgbColorModelHex { Val = "F79646" }),
-                        new A.Hyperlink(new A.RgbColorModelHex { Val = "0000FF" }),
-                        new A.FollowedHyperlinkColor(new A.RgbColorModelHex { Val = "800080" }))
-                    { Name = "Office" },
+                        new A.Dark1Color(
+                            new A.SystemColor
+                            {
+                                Val = A.SystemColorValues.WindowText,
+                                LastColor = "000000"
+                            }),
+                        new A.Light1Color(
+                            new A.SystemColor
+                            {
+                                Val = A.SystemColorValues.Window,
+                                LastColor = "FFFFFF"
+                            }),
+                        new A.Dark2Color(
+                            new A.RgbColorModelHex
+                            {
+                                Val = "1F497D"
+                            }),
+                        new A.Light2Color(
+                            new A.RgbColorModelHex
+                            {
+                                Val = "EEECE1"
+                            }),
+                        new A.Accent1Color(
+                            new A.RgbColorModelHex
+                            {
+                                Val = "4F81BD"
+                            }),
+                        new A.Accent2Color(
+                            new A.RgbColorModelHex
+                            {
+                                Val = "C0504D"
+                            }),
+                        new A.Accent3Color(
+                            new A.RgbColorModelHex
+                            {
+                                Val = "9BBB59"
+                            }),
+                        new A.Accent4Color(
+                            new A.RgbColorModelHex
+                            {
+                                Val = "8064A2"
+                            }),
+                        new A.Accent5Color(
+                            new A.RgbColorModelHex
+                            {
+                                Val = "4BACC6"
+                            }),
+                        new A.Accent6Color(
+                            new A.RgbColorModelHex
+                            {
+                                Val = "F79646"
+                            }),
+                        new A.Hyperlink(
+                            new A.RgbColorModelHex
+                            {
+                                Val = "0000FF"
+                            }),
+                        new A.FollowedHyperlinkColor(
+                            new A.RgbColorModelHex
+                            {
+                                Val = "800080"
+                            }))
+                    {
+                        Name = "Office"
+                    },
                     new A.FontScheme(
-                        new A.MajorFont(new A.LatinFont { Typeface = "Calibri" }, new A.EastAsianFont { Typeface = "" }, new A.ComplexScriptFont { Typeface = "" }),
-                        new A.MinorFont(new A.LatinFont { Typeface = "Calibri" }, new A.EastAsianFont { Typeface = "" }, new A.ComplexScriptFont { Typeface = "" }))
-                    { Name = "Office" },
+                        new A.MajorFont(
+                            new A.LatinFont
+                            {
+                                Typeface = "Calibri"
+                            },
+                            new A.EastAsianFont
+                            {
+                                Typeface = ""
+                            },
+                            new A.ComplexScriptFont
+                            {
+                                Typeface = ""
+                            }),
+                        new A.MinorFont(
+                            new A.LatinFont
+                            {
+                                Typeface = "Calibri"
+                            },
+                            new A.EastAsianFont
+                            {
+                                Typeface = ""
+                            },
+                            new A.ComplexScriptFont
+                            {
+                                Typeface = ""
+                            }))
+                    {
+                        Name = "Office"
+                    },
                     new A.FormatScheme(
                         new A.FillStyleList(
-                            new A.SolidFill(new A.SchemeColor { Val = A.SchemeColorValues.PhColor }),
+                            new A.SolidFill(
+                                new A.SchemeColor
+                                {
+                                    Val = A.SchemeColorValues.PhColor
+                                }),
                             new A.GradientFill(
                                 new A.GradientStopList(
-                                    new A.GradientStop(new A.SchemeColor { Val = A.SchemeColorValues.PhColor }) { Position = 0 },
-                                    new A.GradientStop(new A.SchemeColor { Val = A.SchemeColorValues.PhColor }) { Position = 100000 }),
-                                new A.LinearGradientFill { Angle = 5400000, Scaled = true }),
-                            new A.SolidFill(new A.SchemeColor { Val = A.SchemeColorValues.PhColor })),
+                                    new A.GradientStop(
+                                        new A.SchemeColor
+                                        {
+                                            Val = A.SchemeColorValues.PhColor
+                                        })
+                                    {
+                                        Position = 0
+                                    },
+                                    new A.GradientStop(
+                                        new A.SchemeColor
+                                        {
+                                            Val = A.SchemeColorValues.PhColor
+                                        })
+                                    {
+                                        Position = 100000
+                                    }),
+                                new A.LinearGradientFill
+                                {
+                                    Angle = 5400000,
+                                    Scaled = true
+                                }),
+                            new A.SolidFill(
+                                new A.SchemeColor
+                                {
+                                    Val = A.SchemeColorValues.PhColor
+                                })),
                         new A.LineStyleList(
-                            new A.Outline(new A.SolidFill(new A.SchemeColor { Val = A.SchemeColorValues.PhColor })) { Width = 9525 },
-                            new A.Outline(new A.SolidFill(new A.SchemeColor { Val = A.SchemeColorValues.PhColor })) { Width = 25400 },
-                            new A.Outline(new A.SolidFill(new A.SchemeColor { Val = A.SchemeColorValues.PhColor })) { Width = 38100 }),
+                            new A.Outline(
+                                new A.SolidFill(
+                                    new A.SchemeColor
+                                    {
+                                        Val = A.SchemeColorValues.PhColor
+                                    }))
+                            {
+                                Width = 9525
+                            },
+                            new A.Outline(
+                                new A.SolidFill(
+                                    new A.SchemeColor
+                                    {
+                                        Val = A.SchemeColorValues.PhColor
+                                    }))
+                            {
+                                Width = 25400
+                            },
+                            new A.Outline(
+                                new A.SolidFill(
+                                    new A.SchemeColor
+                                    {
+                                        Val = A.SchemeColorValues.PhColor
+                                    }))
+                            {
+                                Width = 38100
+                            }),
                         new A.EffectStyleList(
                             new A.EffectStyle(new A.EffectList()),
                             new A.EffectStyle(new A.EffectList()),
                             new A.EffectStyle(new A.EffectList())),
                         new A.BackgroundFillStyleList(
-                            new A.SolidFill(new A.SchemeColor { Val = A.SchemeColorValues.PhColor }),
-                            new A.SolidFill(new A.SchemeColor { Val = A.SchemeColorValues.PhColor }),
-                            new A.SolidFill(new A.SchemeColor { Val = A.SchemeColorValues.PhColor })))
-                    { Name = "Office" }),
+                            new A.SolidFill(
+                                new A.SchemeColor
+                                {
+                                    Val = A.SchemeColorValues.PhColor
+                                }),
+                            new A.SolidFill(
+                                new A.SchemeColor
+                                {
+                                    Val = A.SchemeColorValues.PhColor
+                                }),
+                            new A.SolidFill(
+                                new A.SchemeColor
+                                {
+                                    Val = A.SchemeColorValues.PhColor
+                                })))
+                    {
+                        Name = "Office"
+                    }),
                 new A.ObjectDefaults(),
                 new A.ExtraColorSchemeList())
-            { Name = "Office Theme" };
+            {
+                Name = "Office Theme"
+            };
 
             slideMasterPart.SlideMaster = new(
                 new P.CommonSlideData(
                     new P.Background(
-                        new P.BackgroundStyleReference(new A.SchemeColor { Val = A.SchemeColorValues.PhColor }) { Index = 1001 }),
+                        new P.BackgroundStyleReference(
+                            new A.SchemeColor
+                            {
+                                Val = A.SchemeColorValues.PhColor
+                            })
+                        {
+                            Index = 1001
+                        }),
                     new P.ShapeTree(
                         new P.NonVisualGroupShapeProperties(
-                            new P.NonVisualDrawingProperties { Id = 1, Name = "" },
+                            new P.NonVisualDrawingProperties
+                            {
+                                Id = 1,
+                                Name = ""
+                            },
                             new P.NonVisualGroupShapeDrawingProperties(),
                             new P.ApplicationNonVisualDrawingProperties()),
                         new P.GroupShapeProperties(new A.TransformGroup()))),
@@ -733,19 +960,30 @@ public class OpenXmlTests
                     Hyperlink = A.ColorSchemeIndexValues.Hyperlink,
                     FollowedHyperlink = A.ColorSchemeIndexValues.FollowedHyperlink
                 },
-                new P.SlideLayoutIdList(new P.SlideLayoutId { Id = 2147483649U, RelationshipId = "slRid1" }));
+                new P.SlideLayoutIdList(
+                    new P.SlideLayoutId
+                    {
+                        Id = 2147483649U,
+                        RelationshipId = "slRid1"
+                    }));
 
             var slideLayoutPart = slideMasterPart.AddNewPart<SlideLayoutPart>("slRid1");
             slideLayoutPart.SlideLayout = new(
                 new P.CommonSlideData(
                     new P.ShapeTree(
                         new P.NonVisualGroupShapeProperties(
-                            new P.NonVisualDrawingProperties { Id = 1, Name = "" },
+                            new P.NonVisualDrawingProperties
+                            {
+                                Id = 1,
+                                Name = ""
+                            },
                             new P.NonVisualGroupShapeDrawingProperties(),
                             new P.ApplicationNonVisualDrawingProperties()),
                         new P.GroupShapeProperties(new A.TransformGroup()))),
                 new P.ColorMapOverride(new A.MasterColorMapping()))
-            { Type = P.SlideLayoutValues.Title };
+            {
+                Type = P.SlideLayoutValues.Title
+            };
 
             var slidePart = presentationPart.AddNewPart<SlidePart>("sldRid1");
             slidePart.AddPart(slideLayoutPart);
@@ -753,29 +991,65 @@ public class OpenXmlTests
                 new P.CommonSlideData(
                     new P.ShapeTree(
                         new P.NonVisualGroupShapeProperties(
-                            new P.NonVisualDrawingProperties { Id = 1, Name = "" },
+                            new P.NonVisualDrawingProperties
+                            {
+                                Id = 1,
+                                Name = ""
+                            },
                             new P.NonVisualGroupShapeDrawingProperties(),
                             new P.ApplicationNonVisualDrawingProperties()),
                         new P.GroupShapeProperties(new A.TransformGroup()),
                         new P.Shape(
                             new P.NonVisualShapeProperties(
-                                new P.NonVisualDrawingProperties { Id = 2, Name = "Title" },
-                                new P.NonVisualShapeDrawingProperties(new A.ShapeLocks { NoGrouping = true }),
-                                new P.ApplicationNonVisualDrawingProperties(new P.PlaceholderShape { Type = P.PlaceholderValues.CenteredTitle })),
+                                new P.NonVisualDrawingProperties
+                                {
+                                    Id = 2,
+                                    Name = "Title"
+                                },
+                                new P.NonVisualShapeDrawingProperties(
+                                    new A.ShapeLocks
+                                    {
+                                        NoGrouping = true
+                                    }),
+                                new P.ApplicationNonVisualDrawingProperties(
+                                    new P.PlaceholderShape
+                                    {
+                                        Type = P.PlaceholderValues.CenteredTitle
+                                    })),
                             new P.ShapeProperties(),
                             new P.TextBody(
                                 new A.BodyProperties(),
                                 new A.ListStyle(),
                                 new A.Paragraph(
                                     new A.Run(
-                                        new A.RunProperties { Language = "en-US" },
+                                        new A.RunProperties
+                                        {
+                                            Language = "en-US"
+                                        },
                                         new A.Text("Deterministic!"))))))));
 
             presentationPart.Presentation = new(
-                new P.SlideMasterIdList(new P.SlideMasterId { Id = 2147483648U, RelationshipId = "smRid1" }),
-                new P.SlideIdList(new P.SlideId { Id = 256U, RelationshipId = "sldRid1" }),
-                new P.SlideSize { Cx = 9144000, Cy = 6858000 },
-                new P.NotesSize { Cx = 6858000, Cy = 9144000 });
+                new P.SlideMasterIdList(
+                    new P.SlideMasterId
+                    {
+                        Id = 2147483648U,
+                        RelationshipId = "smRid1"
+                    }),
+                new P.SlideIdList(new P.SlideId
+                {
+                    Id = 256U,
+                    RelationshipId = "sldRid1"
+                }),
+                new P.SlideSize
+                {
+                    Cx = 9144000,
+                    Cy = 6858000
+                },
+                new P.NotesSize
+                {
+                    Cx = 6858000,
+                    Cy = 9144000
+                });
         }
 
         stream.Position = 0;

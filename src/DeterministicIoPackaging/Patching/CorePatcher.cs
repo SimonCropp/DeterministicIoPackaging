@@ -1,6 +1,8 @@
 ﻿class CorePatcher :
-    IPatcher
+    IExactMatchPatcher
 {
+    public string ExactMatch => "docProps/core.xml";
+
     static XNamespace dc = "http://purl.org/dc/elements/1.1/";
     static XName creator = dc + "creator";
     static XNamespace cp = "http://schemas.openxmlformats.org/package/2006/metadata/core-properties";

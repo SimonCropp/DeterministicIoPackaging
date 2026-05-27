@@ -1,5 +1,7 @@
-class ContentTypesPatcher : IPatcher
+class ContentTypesPatcher : IExactMatchPatcher
 {
+    public string ExactMatch => "[Content_Types].xml";
+
     public bool IsMatch(Entry entry) =>
         entry.FullName is "[Content_Types].xml";
 
