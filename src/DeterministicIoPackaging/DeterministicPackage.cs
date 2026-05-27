@@ -5,14 +5,14 @@ public static partial class DeterministicPackage
     public static DateTime StableDate { get; } = new(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     public static DateTimeOffset StableDateOffset { get; } = new(StableDate);
 
-    static IReadOnlyList<IPatcher> CreatePatchers()
+    static PatcherSet CreatePatchers()
     {
         var workbookRelsPatcher = new WorkbookRelationshipPatcher();
         var documentRelsPatcher = new DocumentRelationshipPatcher();
         var sheetRelsPatcher = new SheetRelationshipPatcher();
         var wordPartRelsPatcher = new WordPartRelationshipPatcher();
         var pptxRelsPatcher = new PptxRelationshipPatcher();
-        return
+        IReadOnlyList<IPatcher> patchers =
         [
             new ContentTypesPatcher(),
             new RelationshipPatcher(),
@@ -29,6 +29,7 @@ public static partial class DeterministicPackage
             new PptxContentPatcher(pptxRelsPatcher),
             new NumberingPatcher()
         ];
+        return new(patchers);
     }
 
     static Archive CreateArchive(Stream target) => new(target, ZipArchiveMode.Create, leaveOpen: true);
@@ -43,7 +44,7 @@ public static partial class DeterministicPackage
         return new(source, ZipArchiveMode.Read, leaveOpen: true);
     }
 
-    static void DuplicateEntry(Entry sourceEntry, Archive targetArchive, IReadOnlyList<IPatcher> currentPatchers)
+    static void DuplicateEntry(Entry sourceEntry, Archive targetArchive, PatcherSet currentPatchers)
     {
         if (IsSkippedEntry(sourceEntry))
         {
@@ -54,13 +55,9 @@ public static partial class DeterministicPackage
         var targetEntry = CreateEntry(sourceEntry, targetArchive);
         using var targetStream = targetEntry.Open();
 
-        foreach (var patcher in currentPatchers)
+        var patcher = currentPatchers.Find(sourceEntry);
+        if (patcher != null)
         {
-            if (!patcher.IsMatch(sourceEntry))
-            {
-                continue;
-            }
-
             var xml = XDocument.Load(sourceStream);
             patcher.PatchXml(xml, sourceEntry.FullName);
             SaveXml(xml, targetStream);
@@ -84,7 +81,7 @@ public static partial class DeterministicPackage
         CopyOrRecurseZip(sourceStream, targetStream);
     }
 
-    static async Task DuplicateEntryAsync(Entry sourceEntry, Archive targetArchive, IReadOnlyList<IPatcher> currentPatchers, Cancel cancel)
+    static async Task DuplicateEntryAsync(Entry sourceEntry, Archive targetArchive, PatcherSet currentPatchers, Cancel cancel)
     {
         if (IsSkippedEntry(sourceEntry))
         {
@@ -94,13 +91,10 @@ public static partial class DeterministicPackage
         using var sourceStream = await sourceEntry.OpenAsync(cancel);
         var targetEntry = CreateEntry(sourceEntry, targetArchive);
         using var targetStream = await targetEntry.OpenAsync(cancel);
-        foreach (var patcher in currentPatchers)
-        {
-            if (!patcher.IsMatch(sourceEntry))
-            {
-                continue;
-            }
 
+        var patcher = currentPatchers.Find(sourceEntry);
+        if (patcher != null)
+        {
             var xml = await XDocument.LoadAsync(sourceStream, LoadOptions.None, cancel);
             patcher.PatchXml(xml, sourceEntry.FullName);
             await SaveXml(xml, targetStream, cancel);

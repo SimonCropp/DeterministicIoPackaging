@@ -1,5 +1,7 @@
-class RelationshipPatcher : IPatcher
+class RelationshipPatcher : IExactMatchPatcher
 {
+    public string ExactMatch => "_rels/.rels";
+
     public bool IsMatch(Entry entry) =>
         entry.FullName is "_rels/.rels";
 
@@ -7,13 +9,11 @@ class RelationshipPatcher : IPatcher
     {
         var root = xml.Root!;
 
-        foreach (var element in root.Elements().Where(IsPsmdcpElement).ToList())
-        {
-            element.Remove();
-        }
+        // Extensions.Remove(IEnumerable<XElement>) snapshots internally, so
+        // the explicit ToList() + foreach loop is redundant.
+        root.Elements().Where(IsPsmdcpElement).Remove();
 
         RelationshipRenumber.RenumberAndSort(xml, entryName);
-
     }
 
     static bool IsPsmdcpElement(XElement element)

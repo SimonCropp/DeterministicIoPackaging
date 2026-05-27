@@ -1,0 +1,21 @@
+﻿<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml">
+  <w:body>
+    <w:p>
+      <w:r>
+        <w:t>hello</w:t>
+      </w:r>
+    </w:p>
+    <w:tr>
+      <w:tc>
+        <w:p>
+          <w:r>
+            <w:t>cell</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+    </w:tr>
+    <w:sectPr>
+      <w:pgSz w:w="12240" w:h="15840" />
+    </w:sectPr>
+  </w:body>
+</w:document>

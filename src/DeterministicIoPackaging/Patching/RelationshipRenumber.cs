@@ -14,9 +14,13 @@ static class RelationshipRenumber
             NormalizeTargets(root, entryName);
         }
 
+        // Ordinal sort matches the entry-name comparison used elsewhere (see
+        // DeterministicPackage_Convert.OrderedEntries). Without an explicit
+        // comparer, OrderBy defaults to culture-sensitive comparison — slower
+        // and a latent determinism risk on machines with different cultures.
         var relationships = root.Elements()
-            .OrderBy(_ => _.Attribute("Type")!.Value)
-            .ThenBy(_ => _.Attribute("Target")!.Value)
+            .OrderBy(_ => _.Attribute("Type")!.Value, StringComparer.Ordinal)
+            .ThenBy(_ => _.Attribute("Target")!.Value, StringComparer.Ordinal)
             .ToList();
 
         var mapping = new Dictionary<string, string>();
@@ -73,20 +77,22 @@ static class RelationshipRenumber
 
     public static void RemapIds(XDocument xml, Dictionary<string, string> mapping)
     {
+        // Walk attributes via the linked-list once per element rather than
+        // calling element.Attribute(name) three times — each Attribute() call
+        // re-walks the linked list, so three lookups per descendant is roughly
+        // 3x the work. XName equality is a fast reference compare because
+        // XNames are interned.
         foreach (var descendant in xml.Descendants())
         {
-            RemapAttribute(descendant, rId, mapping);
-            RemapAttribute(descendant, rEmbed, mapping);
-            RemapAttribute(descendant, rLink, mapping);
-        }
-    }
-
-    static void RemapAttribute(XElement element, XName name, Dictionary<string, string> mapping)
-    {
-        var attr = element.Attribute(name);
-        if (attr != null && mapping.TryGetValue(attr.Value, out var newId))
-        {
-            attr.SetValue(newId);
+            for (var attr = descendant.FirstAttribute; attr != null; attr = attr.NextAttribute)
+            {
+                var name = attr.Name;
+                if ((name == rId || name == rEmbed || name == rLink) &&
+                    mapping.TryGetValue(attr.Value, out var newId))
+                {
+                    attr.SetValue(newId);
+                }
+            }
         }
     }
 }

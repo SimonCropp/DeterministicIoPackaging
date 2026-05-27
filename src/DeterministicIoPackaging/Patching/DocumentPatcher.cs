@@ -1,9 +1,11 @@
-class DocumentPatcher(DocumentRelationshipPatcher relsPatcher) : IPatcher
+class DocumentPatcher(DocumentRelationshipPatcher relsPatcher) : IExactMatchPatcher
 {
     static XNamespace wp = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing";
     static XNamespace pic = "http://schemas.openxmlformats.org/drawingml/2006/picture";
     static XName wpDocPr = wp + "docPr";
     static XName picCNvPr = pic + "cNvPr";
+
+    public string ExactMatch => "word/document.xml";
 
     public bool IsMatch(Entry entry) =>
         entry.FullName is "word/document.xml";
@@ -14,22 +16,42 @@ class DocumentPatcher(DocumentRelationshipPatcher relsPatcher) : IPatcher
 
         WordRevisionMarkers.Strip(xml);
 
-        // Find all elements with id attributes that need normalization
-        var elementsWithIds = new List<XElement>();
-        elementsWithIds.AddRange(root.Descendants(wpDocPr));
-        elementsWithIds.AddRange(root.Descendants(picCNvPr));
-
-        // Renumber all id attributes deterministically
-        for (var i = 0; i < elementsWithIds.Count; i++)
+        // Collect id attributes in one Descendants() walk rather than two.
+        // Preserves the original ordering: all wp:docPr ids first, then
+        // pic:cNvPr ids, numbering continuing from where the docPrs left off.
+        // Storing the XAttribute directly avoids a redundant Attribute("id")
+        // lookup during renumbering.
+        var docPrIds = new List<XAttribute>();
+        var picIds = new List<XAttribute>();
+        foreach (var element in root.Descendants())
         {
-            // Use index + 1 for 1-based numbering (common in Office Open XML)
-            elementsWithIds[i].Attribute("id")!.Value = (i + 1).ToString();
+            var name = element.Name;
+            if (name == wpDocPr)
+            {
+                docPrIds.Add(element.Attribute("id")!);
+            }
+            else if (name == picCNvPr)
+            {
+                picIds.Add(element.Attribute("id")!);
+            }
+        }
+
+        var index = 1;
+        foreach (var attr in docPrIds)
+        {
+            attr.Value = index.ToString();
+            index++;
+        }
+
+        foreach (var attr in picIds)
+        {
+            attr.Value = index.ToString();
+            index++;
         }
 
         if (relsPatcher.IdMapping.Count > 0)
         {
             RelationshipRenumber.RemapIds(xml, relsPatcher.IdMapping);
         }
-
     }
 }

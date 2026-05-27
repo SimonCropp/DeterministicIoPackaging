@@ -33,12 +33,24 @@ static class WordRevisionMarkers
             return;
         }
 
+        // Walk the attribute linked-list manually rather than via LINQ +
+        // ToList(). Capturing NextAttribute before Remove() lets us mutate
+        // safely without per-element allocations — common case is zero
+        // matching attributes, so this method used to allocate a Where
+        // iterator and a List<XAttribute> for every node in the document.
         foreach (var element in root.DescendantsAndSelf())
         {
-            element.Attributes()
-                .Where(_ => attributesToRemove.Contains(_.Name))
-                .ToList()
-                .Remove();
+            var attr = element.FirstAttribute;
+            while (attr != null)
+            {
+                var next = attr.NextAttribute;
+                if (attributesToRemove.Contains(attr.Name))
+                {
+                    attr.Remove();
+                }
+
+                attr = next;
+            }
         }
     }
 }
