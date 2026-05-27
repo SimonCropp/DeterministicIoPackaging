@@ -4,3 +4,6 @@ global using System.Buffers.Binary;
 global using System.IO.Compression;
 global using System.IO.Hashing;
 global using Polyfills;
+global using DocumentFormat.OpenXml;
+global using DocumentFormat.OpenXml.Packaging;
+global using DocumentFormat.OpenXml.Validation;

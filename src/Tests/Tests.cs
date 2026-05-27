@@ -1,7 +1,4 @@
-﻿using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml.Validation;
-
-[TestFixture]
+﻿[TestFixture]
 public class Tests
 {
     [Test]

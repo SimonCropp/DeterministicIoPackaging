@@ -1,7 +1,4 @@
-using DocumentFormat.OpenXml;
-using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
-using DocumentFormat.OpenXml.Validation;
 using W = DocumentFormat.OpenXml.Wordprocessing;
 using A = DocumentFormat.OpenXml.Drawing;
 using DW = DocumentFormat.OpenXml.Drawing.Wordprocessing;
@@ -1035,11 +1032,12 @@ public class OpenXmlTests
                         Id = 2147483648U,
                         RelationshipId = "smRid1"
                     }),
-                new P.SlideIdList(new P.SlideId
-                {
-                    Id = 256U,
-                    RelationshipId = "sldRid1"
-                }),
+                new P.SlideIdList(
+                    new P.SlideId
+                    {
+                        Id = 256U,
+                        RelationshipId = "sldRid1"
+                    }),
                 new P.SlideSize
                 {
                     Cx = 9144000,
