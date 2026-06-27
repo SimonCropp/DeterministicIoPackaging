@@ -119,39 +119,11 @@ public static partial class DeterministicPackage
         await source.CopyToAsync(target, cancel);
     }
 
-    static int ReadUpTo(Stream source, byte[] buffer, int count)
-    {
-        var read = 0;
-        while (read < count)
-        {
-            var n = source.Read(buffer, read, count - read);
-            if (n == 0)
-            {
-                break;
-            }
+    static int ReadUpTo(Stream source, byte[] buffer, int count) =>
+        source.ReadAtLeast(buffer.AsSpan(0, count), count, throwOnEndOfStream: false);
 
-            read += n;
-        }
-
-        return read;
-    }
-
-    static async Task<int> ReadUpToAsync(Stream source, byte[] buffer, int count, Cancel cancel)
-    {
-        var read = 0;
-        while (read < count)
-        {
-            var n = await source.ReadAsync(buffer, read, count - read, cancel);
-            if (n == 0)
-            {
-                break;
-            }
-
-            read += n;
-        }
-
-        return read;
-    }
+    static async Task<int> ReadUpToAsync(Stream source, byte[] buffer, int count, Cancel cancel) =>
+        await source.ReadAtLeastAsync(buffer.AsMemory(0, count), count, throwOnEndOfStream: false, cancel);
 
     static IOrderedEnumerable<Entry> OrderedEntries(this Archive archive) =>
         archive.Entries
