@@ -2,42 +2,45 @@
 
 public static partial class DeterministicPackage
 {
+    // Normalizing a package is not a streaming operation: entries are reordered,
+    // every part is rewritten, and the central directory is patched after the fact
+    // (see ZipPlatformNormalizer) — all of which need the whole archive in a
+    // seekable buffer. The result is therefore always a fresh MemoryStream, built
+    // and patched in place with no extra copy.
     public static MemoryStream Convert(Stream source)
     {
+        var patchers = CreatePatchers();
         var target = new MemoryStream();
-        Convert(source, target);
+        using (var sourceArchive = ReadArchive(source))
+        using (var targetArchive = CreateArchive(target))
+        {
+            foreach (var sourceEntry in sourceArchive.OrderedEntries())
+            {
+                DuplicateEntry(sourceEntry, targetArchive, patchers);
+            }
+        }
+
+        ZipPlatformNormalizer.Normalize(target);
         target.Position = 0;
         return target;
     }
 
-    public static async Task<MemoryStream> ConvertAsync(Stream source)
+    public static async Task<MemoryStream> ConvertAsync(Stream source, Cancel token = default)
     {
+        var patchers = CreatePatchers();
         var target = new MemoryStream();
-        await ConvertAsync(source, target);
+        using (var sourceArchive = ReadArchive(source))
+        using (var targetArchive = CreateArchive(target))
+        {
+            foreach (var sourceEntry in sourceArchive.OrderedEntries())
+            {
+                await DuplicateEntryAsync(sourceEntry, targetArchive, patchers, token);
+            }
+        }
+
+        ZipPlatformNormalizer.Normalize(target);
         target.Position = 0;
         return target;
-    }
-
-    public static void Convert(Stream source, Stream target)
-    {
-        var patchers = CreatePatchers();
-        using var sourceArchive = ReadArchive(source);
-        using var targetArchive = CreateArchive(target);
-        foreach (var sourceEntry in sourceArchive.OrderedEntries())
-        {
-            DuplicateEntry(sourceEntry, targetArchive, patchers);
-        }
-    }
-
-    public static async Task ConvertAsync(Stream source, Stream target, Cancel token = default)
-    {
-        var patchers = CreatePatchers();
-        using var sourceArchive = ReadArchive(source);
-        using var targetArchive = CreateArchive(target);
-        foreach (var sourceEntry in sourceArchive.OrderedEntries())
-        {
-            await DuplicateEntryAsync(sourceEntry, targetArchive, patchers, token);
-        }
     }
 
     // ZIP local file header signature ("PK\x03\x04").
@@ -84,7 +87,8 @@ public static partial class DeterministicPackage
             buffer.Write(head, 0, read);
             source.CopyTo(buffer);
             buffer.Position = 0;
-            Convert(buffer, target);
+            using var normalized = Convert(buffer);
+            normalized.CopyTo(target);
             return;
         }
 
@@ -107,7 +111,8 @@ public static partial class DeterministicPackage
             await buffer.WriteAsync(head, 0, read, cancel);
             await source.CopyToAsync(buffer, cancel);
             buffer.Position = 0;
-            await ConvertAsync(buffer, target, cancel);
+            using var normalized = await ConvertAsync(buffer, cancel);
+            await normalized.CopyToAsync(target, cancel);
             return;
         }
 

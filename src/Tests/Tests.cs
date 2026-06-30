@@ -265,31 +265,28 @@ public class Tests
 
     static MemoryStream Convert(string packagePath)
     {
-        var targetStream = new MemoryStream();
-
         #region Convert
 
         using var sourceStream = File.OpenRead(packagePath);
-        DeterministicPackage.Convert(sourceStream, targetStream);
+        var target = DeterministicPackage.Convert(sourceStream);
 
         #endregion
 
-        return targetStream;
+        return target;
     }
 
 
     static async Task<MemoryStream> ConvertAsync(Extension extension)
     {
         var packagePath = Path.Combine(directory, $"sample.{extension}");
-        var targetStream = new MemoryStream();
 
         #region ConvertAsync
 
         using var sourceStream = File.OpenRead(packagePath);
-        await DeterministicPackage.ConvertAsync(sourceStream, targetStream);
+        var target = await DeterministicPackage.ConvertAsync(sourceStream);
 
         #endregion
 
-        return targetStream;
+        return target;
     }
 }

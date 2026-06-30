@@ -58,13 +58,13 @@ See [Verify Naming docs](https://github.com/VerifyTests/Verify/blob/main/docs/na
 
 ### Convert
 
-<!-- snippet: ConvertAsync -->
-<a id='snippet-ConvertAsync'></a>
+<!-- snippet: Convert -->
+<a id='snippet-Convert'></a>
 ```cs
 using var sourceStream = File.OpenRead(packagePath);
-await DeterministicPackage.ConvertAsync(sourceStream, targetStream);
+var target = DeterministicPackage.Convert(sourceStream);
 ```
-<sup><a href='/src/Tests/Tests.cs#L286-L291' title='Snippet source file'>snippet source</a> | <a href='#snippet-ConvertAsync' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/Tests/Tests.cs#L268-L273' title='Snippet source file'>snippet source</a> | <a href='#snippet-Convert' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 
@@ -74,9 +74,9 @@ await DeterministicPackage.ConvertAsync(sourceStream, targetStream);
 <a id='snippet-ConvertAsync'></a>
 ```cs
 using var sourceStream = File.OpenRead(packagePath);
-await DeterministicPackage.ConvertAsync(sourceStream, targetStream);
+var target = await DeterministicPackage.ConvertAsync(sourceStream);
 ```
-<sup><a href='/src/Tests/Tests.cs#L286-L291' title='Snippet source file'>snippet source</a> | <a href='#snippet-ConvertAsync' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/Tests/Tests.cs#L283-L288' title='Snippet source file'>snippet source</a> | <a href='#snippet-ConvertAsync' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 
