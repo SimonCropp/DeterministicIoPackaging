@@ -1,3 +1,5 @@
+using System.Buffers.Binary;
+
 static class SampleXml
 {
     static XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
@@ -192,5 +194,51 @@ static class SampleXml
         using var stream = entry.Open();
         using var writer = new StreamWriter(stream, new UTF8Encoding(false));
         xml.Save(writer, SaveOptions.DisableFormatting);
+    }
+
+    // Builds a minimal PNG (signature + IHDR + IDAT + IEND) whose IDAT carries a
+    // zlib-compressed payload of `rawBytes` bytes — that payload is what
+    // PngNormalizer decompresses and rewrites as stored zlib blocks. Chunk CRCs
+    // are left zero: the normalizer reads chunk lengths and re-derives the IDAT
+    // CRC itself, so the input value is irrelevant for benchmarking it.
+    public static byte[] BuildPng(int rawBytes)
+    {
+        var raw = new byte[rawBytes];
+        for (var i = 0; i < raw.Length; i++)
+        {
+            raw[i] = (byte) (i * 31 + 7);
+        }
+
+        byte[] idat;
+        using (var compressed = new MemoryStream())
+        {
+            using (var zlib = new ZLibStream(compressed, CompressionLevel.Optimal, leaveOpen: true))
+            {
+                zlib.Write(raw, 0, raw.Length);
+            }
+
+            idat = compressed.ToArray();
+        }
+
+        using var png = new MemoryStream();
+        ReadOnlySpan<byte> signature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+        png.Write(signature);
+        WriteChunk(png, "IHDR"u8, new byte[13]);
+        WriteChunk(png, "IDAT"u8, idat);
+        WriteChunk(png, "IEND"u8, []);
+        return png.ToArray();
+    }
+
+    static void WriteChunk(Stream png, ReadOnlySpan<byte> type, ReadOnlySpan<byte> data)
+    {
+        Span<byte> header = stackalloc byte[4];
+        BinaryPrimitives.WriteInt32BigEndian(header, data.Length);
+        png.Write(header);
+        png.Write(type);
+        png.Write(data);
+
+        // CRC placeholder (PngNormalizer does not validate input chunk CRCs).
+        header.Clear();
+        png.Write(header);
     }
 }
