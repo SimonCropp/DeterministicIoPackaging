@@ -46,9 +46,15 @@ class NumberingPatcher : IExactMatchPatcher
             }
         }
 
-        // Now sort by content (which is now consistent since IDs are all "0")
+        // Now sort by content (which is now consistent since IDs are all "0").
+        // Use Ordinal rather than the culture-sensitive default comparer so the
+        // order — and therefore the abstractNumId assignment below — is identical
+        // across machines, cultures and OSes. Without it, OrderBy's default
+        // linguistic comparison is a latent determinism risk (see the same
+        // deliberate choice in RelationshipRenumber.RenumberAndSort). OrderBy
+        // (stable) is retained so equal-content elements keep document order.
         var sortedAbstractNums = abstractNums
-            .OrderBy(_ => _.ToString())
+            .OrderBy(_ => _.ToString(), StringComparer.Ordinal)
             .ToList();
 
         // Build the mapping and update abstractNumId attributes to their new sorted index
