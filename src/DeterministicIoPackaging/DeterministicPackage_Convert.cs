@@ -22,22 +22,40 @@ public static partial class DeterministicPackage
     {
         var patchers = CreatePatchers();
         using var sourceArchive = ReadArchive(source);
-        using var targetArchive = CreateArchive(target);
-        foreach (var sourceEntry in sourceArchive.OrderedEntries())
+
+        // Build into a buffer first so the central directory can be normalized
+        // (see ZipPlatformNormalizer) before the bytes reach the caller's stream.
+        using var buffer = new MemoryStream();
+        using (var targetArchive = CreateArchive(buffer))
         {
-            DuplicateEntry(sourceEntry, targetArchive, patchers);
+            foreach (var sourceEntry in sourceArchive.OrderedEntries())
+            {
+                DuplicateEntry(sourceEntry, targetArchive, patchers);
+            }
         }
+
+        ZipPlatformNormalizer.Normalize(buffer);
+        buffer.Position = 0;
+        buffer.CopyTo(target);
     }
 
     public static async Task ConvertAsync(Stream source, Stream target, Cancel token = default)
     {
         var patchers = CreatePatchers();
         using var sourceArchive = ReadArchive(source);
-        using var targetArchive = CreateArchive(target);
-        foreach (var sourceEntry in sourceArchive.OrderedEntries())
+
+        using var buffer = new MemoryStream();
+        using (var targetArchive = CreateArchive(buffer))
         {
-            await DuplicateEntryAsync(sourceEntry, targetArchive, patchers, token);
+            foreach (var sourceEntry in sourceArchive.OrderedEntries())
+            {
+                await DuplicateEntryAsync(sourceEntry, targetArchive, patchers, token);
+            }
         }
+
+        ZipPlatformNormalizer.Normalize(buffer);
+        buffer.Position = 0;
+        await buffer.CopyToAsync(target, token);
     }
 
     // ZIP local file header signature ("PK\x03\x04").

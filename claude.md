@@ -70,6 +70,7 @@ The content patcher receives the relationship patcher via constructor injection.
 - ZIP entries use Deflate compression via `ZipArchive`. Binary output may differ between net48 and net10.0+ due to Deflate implementation differences, but XML content is identical
 - Entries are sorted by `FullName` using `StringComparer.Ordinal`
 - Binary snapshot tests use `UniqueForRuntime` to allow framework-specific verified files
+- `ZipPlatformNormalizer` makes output **OS-independent**: `ZipArchive` stamps the host OS into each central-directory record (the "version made by" high byte is 0 on Windows, 3 on Unix; Unix can also leak file-mode bits into the external-attributes field). After the archive is built into a buffer, the normalizer rewrites the host byte to 0 (MS-DOS/FAT) and clears external attributes on every record, so identical bytes are produced on Windows/macOS/Linux. The only remaining cross-environment difference is the Deflate stream (cross-runtime, not cross-OS). Because `Convert`/`ConvertAsync` now build into a `MemoryStream` before this pass, the target stream need not be seekable.
 - `PngNormalizer` writes raw zlib stored blocks (CMF+FLG + DEFLATE stored blocks + Adler-32) instead of using `ZLibStream`, which produces different output on net48 vs net10.0
 
 Example patcher structure:
