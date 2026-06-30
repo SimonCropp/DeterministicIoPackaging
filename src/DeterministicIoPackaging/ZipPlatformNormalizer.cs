@@ -1,7 +1,5 @@
 using System.Buffers.Binary;
 
-namespace DeterministicIoPackaging;
-
 // ZipArchive stamps the host operating system into every central-directory
 // record: the high byte of the "version made by" field is 0 on Windows and 3
 // on Unix (per the .ZIP spec § 4.4.2), and Unix builds can additionally leak
