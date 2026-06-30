@@ -78,7 +78,7 @@ public static partial class DeterministicPackage
             return;
         }
 
-        CopyOrRecurseZip(sourceStream, targetStream);
+        CopyOrRecurseZip(sourceStream, targetStream, sourceEntry.Length);
     }
 
     static async Task DuplicateEntryAsync(Entry sourceEntry, Archive targetArchive, PatcherSet currentPatchers, Cancel cancel)
@@ -115,7 +115,7 @@ public static partial class DeterministicPackage
             return;
         }
 
-        await CopyOrRecurseZipAsync(sourceStream, targetStream, cancel);
+        await CopyOrRecurseZipAsync(sourceStream, targetStream, sourceEntry.Length, cancel);
     }
 
     static bool IsSpreadsheetXml(Entry entry) =>

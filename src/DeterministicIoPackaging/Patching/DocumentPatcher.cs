@@ -14,27 +14,15 @@ class DocumentPatcher(DocumentRelationshipPatcher relsPatcher) : IExactMatchPatc
     {
         var root = xml.Root!;
 
-        WordRevisionMarkers.Strip(xml);
-
-        // Collect id attributes in one Descendants() walk rather than two.
-        // Preserves the original ordering: all wp:docPr ids first, then
-        // pic:cNvPr ids, numbering continuing from where the docPrs left off.
-        // Storing the XAttribute directly avoids a redundant Attribute("id")
-        // lookup during renumbering.
+        // Strip revision markers and collect the drawing-id attributes in a
+        // single tree traversal. word/document.xml is the largest content part,
+        // so fusing these two passes avoids walking it twice. Ordering is
+        // preserved: all wp:docPr ids first, then pic:cNvPr ids, numbering
+        // continuing from where the docPrs left off. Storing the XAttribute
+        // directly avoids a redundant Attribute("id") lookup during renumbering.
         var docPrIds = new List<XAttribute>();
         var picIds = new List<XAttribute>();
-        foreach (var element in root.Descendants())
-        {
-            var name = element.Name;
-            if (name == wpDocPr)
-            {
-                docPrIds.Add(element.Attribute("id")!);
-            }
-            else if (name == picCNvPr)
-            {
-                picIds.Add(element.Attribute("id")!);
-            }
-        }
+        WordRevisionMarkers.StripAndCollectDrawingIds(root, wpDocPr, picCNvPr, docPrIds, picIds);
 
         var index = 1;
         foreach (var attr in docPrIds)

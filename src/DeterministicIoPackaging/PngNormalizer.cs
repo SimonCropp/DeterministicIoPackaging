@@ -1,7 +1,5 @@
 using System.Buffers.Binary;
 
-namespace DeterministicIoPackaging;
-
 static class PngNormalizer
 {
     static readonly byte[] pngSignature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
@@ -98,56 +96,77 @@ static class PngNormalizer
         var raw = decompressedStream.GetBuffer();
         var rawLength = (int) decompressedStream.Length;
 
-        // Write raw zlib stored format to avoid framework DEFLATE differences.
-        // Format: CMF(0x78) FLG(0x01) + DEFLATE stored blocks + Adler-32
-        using var compressOutput = new MemoryStream();
-        // CMF: deflate, 32K window
-        compressOutput.WriteByte(0x78);
-        // FLG: no dict, check bits make CMF*256+FLG divisible by 31
-        compressOutput.WriteByte(0x01);
+        // Emit the IDAT chunk straight to target instead of staging the whole
+        // normalized zlib stream in a second MemoryStream. The chunk length is
+        // computed analytically and a single Crc32 accumulates the same bytes as
+        // they are written, so this avoids buffering a second full copy of the
+        // image and two extra passes over it (GetBuffer for the write + the CRC).
+        //
+        // Raw zlib stored format (avoids framework DEFLATE differences):
+        //   CMF(0x78) FLG(0x01) + DEFLATE stored blocks + Adler-32.
+        // Each stored block is a 5-byte header (BFINAL/BTYPE + LEN + NLEN) plus
+        // its payload; a zero-length image still emits one empty final block.
+        var blockCount = rawLength == 0 ? 1 : (rawLength + 65534) / 65535;
+        var idatLength = 2 + blockCount * 5 + rawLength + 4;
 
-        // Write DEFLATE stored blocks (max 65535 bytes each)
-        var offset = 0;
-        while (offset < rawLength)
-        {
-            var blockSize = Math.Min(rawLength - offset, 65535);
-            var isFinal = offset + blockSize >= rawLength;
-            compressOutput.WriteByte(isFinal ? (byte) 1 : (byte) 0); // BFINAL + BTYPE=00
-            compressOutput.WriteByte((byte) (blockSize & 0xFF));
-            compressOutput.WriteByte((byte) (blockSize >> 8));
-            compressOutput.WriteByte((byte) (~blockSize & 0xFF));
-            compressOutput.WriteByte((byte) ((~blockSize >> 8) & 0xFF));
-            compressOutput.Write(raw, offset, blockSize);
-            offset += blockSize;
-        }
+        var crc = new Crc32();
+
+        // Chunk length (big-endian) + "IDAT". The CRC covers the type + data, not the length.
+        Span<byte> lengthAndType = stackalloc byte[8];
+        BinaryPrimitives.WriteInt32BigEndian(lengthAndType, idatLength);
+        idatType.AsSpan().CopyTo(lengthAndType.Slice(4));
+        target.Write(lengthAndType);
+        crc.Append(lengthAndType.Slice(4, 4));
+
+        // Reusable scratch for the 2-byte zlib header and the 5-byte block headers.
+        Span<byte> block = stackalloc byte[5];
+        // CMF: deflate, 32K window. FLG: no dict, CMF*256+FLG divisible by 31.
+        block[0] = 0x78;
+        block[1] = 0x01;
+        target.Write(block.Slice(0, 2));
+        crc.Append(block.Slice(0, 2));
 
         if (rawLength == 0)
         {
-            // Empty data: single final stored block with length 0
-            compressOutput.WriteByte(1);
-            compressOutput.Write([0, 0, 0xFF, 0xFF], 0, 4);
+            // Empty data: single final stored block with length 0.
+            block[0] = 1;
+            block[1] = 0;
+            block[2] = 0;
+            block[3] = 0xFF;
+            block[4] = 0xFF;
+            target.Write(block);
+            crc.Append(block);
+        }
+        else
+        {
+            // DEFLATE stored blocks (max 65535 bytes each).
+            var offset = 0;
+            while (offset < rawLength)
+            {
+                var blockSize = Math.Min(rawLength - offset, 65535);
+                var isFinal = offset + blockSize >= rawLength;
+                block[0] = isFinal ? (byte) 1 : (byte) 0; // BFINAL + BTYPE=00
+                block[1] = (byte) (blockSize & 0xFF);
+                block[2] = (byte) (blockSize >> 8);
+                block[3] = (byte) (~blockSize & 0xFF);
+                block[4] = (byte) ((~blockSize >> 8) & 0xFF);
+                target.Write(block);
+                crc.Append(block);
+
+                target.Write(raw, offset, blockSize);
+                crc.Append(raw.AsSpan(offset, blockSize));
+                offset += blockSize;
+            }
         }
 
-        // Adler-32 checksum
-        var adler = Adler32(raw, rawLength);
-        compressOutput.WriteByte((byte) (adler >> 24));
-        compressOutput.WriteByte((byte) (adler >> 16));
-        compressOutput.WriteByte((byte) (adler >> 8));
-        compressOutput.WriteByte((byte) adler);
+        // Adler-32 checksum, then the chunk's CRC-32 (over type + data).
+        Span<byte> trailer = stackalloc byte[4];
+        BinaryPrimitives.WriteUInt32BigEndian(trailer, Adler32(raw, rawLength));
+        target.Write(trailer);
+        crc.Append(trailer);
 
-        var length = (int) compressOutput.Length;
-        var header = new byte[4];
-        BinaryPrimitives.WriteInt32BigEndian(header, length);
-        target.Write(header);
-        target.Write(idatType);
-        target.Write(compressOutput.GetBuffer(), 0, length);
-
-        var crc = new Crc32();
-        crc.Append(idatType);
-        crc.Append(compressOutput.GetBuffer().AsSpan(0, length));
-        var crcBytes = new byte[4];
-        BinaryPrimitives.WriteUInt32BigEndian(crcBytes, crc.GetCurrentHashAsUInt32());
-        target.Write(crcBytes);
+        BinaryPrimitives.WriteUInt32BigEndian(trailer, crc.GetCurrentHashAsUInt32());
+        target.Write(trailer);
     }
 
     // Adler-32 checksum as defined in RFC 1950.

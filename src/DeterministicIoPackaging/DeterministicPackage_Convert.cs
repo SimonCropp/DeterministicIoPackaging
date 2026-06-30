@@ -76,14 +76,17 @@ public static partial class DeterministicPackage
     // packages flow through with whatever non-deterministic deflate/timestamps
     // their producer emitted, defeating the deterministic guarantee for the
     // outer package.
-    static void CopyOrRecurseZip(Stream source, Stream target)
+    static void CopyOrRecurseZip(Stream source, Stream target, long sourceLength)
     {
         var head = new byte[4];
         var read = ReadUpTo(source, head, 4);
 
         if (LooksLikeZip(head, read))
         {
-            using var buffer = new MemoryStream();
+            // The whole entry (head + remainder) is buffered for the recursive
+            // Convert. Its uncompressed size is known from the central directory,
+            // so presize the buffer to avoid MemoryStream's grow-and-copy churn.
+            using var buffer = new MemoryStream(InitialCapacity(sourceLength));
             buffer.Write(head, 0, read);
             source.CopyTo(buffer);
             buffer.Position = 0;
@@ -100,14 +103,16 @@ public static partial class DeterministicPackage
         source.CopyTo(target);
     }
 
-    static async Task CopyOrRecurseZipAsync(Stream source, Stream target, Cancel cancel)
+    static async Task CopyOrRecurseZipAsync(Stream source, Stream target, long sourceLength, Cancel cancel)
     {
         var head = new byte[4];
         var read = await ReadUpToAsync(source, head, 4, cancel);
 
         if (LooksLikeZip(head, read))
         {
-            using var buffer = new MemoryStream();
+            // See CopyOrRecurseZip: presize the recursion buffer to the entry's
+            // known uncompressed size to avoid grow-and-copy reallocations.
+            using var buffer = new MemoryStream(InitialCapacity(sourceLength));
             await buffer.WriteAsync(head, 0, read, cancel);
             await source.CopyToAsync(buffer, cancel);
             buffer.Position = 0;
@@ -122,6 +127,18 @@ public static partial class DeterministicPackage
         }
 
         await source.CopyToAsync(target, cancel);
+    }
+
+    // Clamp a ZipArchiveEntry.Length to a valid MemoryStream initial capacity.
+    // 0 (the parameterless-constructor default) for unknown/oversized lengths.
+    static int InitialCapacity(long sourceLength)
+    {
+        if (sourceLength is > 0 and <= int.MaxValue)
+        {
+            return (int) sourceLength;
+        }
+
+        return 0;
     }
 
     static int ReadUpTo(Stream source, byte[] buffer, int count) =>
