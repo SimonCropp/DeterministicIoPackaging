@@ -34,21 +34,6 @@ public class ZipPlatformNormalizerTests
         AssertNormalized(result.ToArray());
     }
 
-    // A non-seekable / non-MemoryStream target can't be patched in place, so
-    // Convert must route it through the buffered path and still emit normalized
-    // bytes. This is the same path nested-zip recursion uses.
-    [Test]
-    public void NonMemoryStreamTargetIsNormalizedViaFallback()
-    {
-        var inner = new MemoryStream();
-        using (var target = new WriteOnlyStream(inner))
-        {
-            DeterministicPackage.Convert(BuildArchive(), target);
-        }
-
-        AssertNormalized(inner.ToArray());
-    }
-
     // The low byte of "version made by" encodes the spec version (a function of
     // the features used, not the OS) and must be left alone.
     [Test]
@@ -138,21 +123,5 @@ public class ZipPlatformNormalizerTests
         }
 
         return records;
-    }
-
-    // Write-only, non-seekable stream that forwards to an inner stream, forcing
-    // Convert down its buffered fallback path (target is not a MemoryStream).
-    class WriteOnlyStream(Stream inner) : Stream
-    {
-        public override bool CanWrite => true;
-        public override bool CanRead => false;
-        public override bool CanSeek => false;
-        public override void Write(byte[] buffer, int offset, int count) => inner.Write(buffer, offset, count);
-        public override void Flush() => inner.Flush();
-        public override long Length => throw new NotSupportedException();
-        public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
-        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-        public override void SetLength(long value) => throw new NotSupportedException();
-        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 }

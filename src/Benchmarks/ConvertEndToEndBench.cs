@@ -11,10 +11,9 @@ public class ConvertEndToEndBench
         sourceBytes = SampleXml.BuildDocxZip(Paragraphs, drawings: 200, hyperlinks: 200);
 
     [Benchmark]
-    public void Convert()
+    public MemoryStream Convert()
     {
         using var source = new MemoryStream(sourceBytes, writable: false);
-        using var target = new MemoryStream();
-        DeterministicPackage.Convert(source, target);
+        return DeterministicPackage.Convert(source);
     }
 }
