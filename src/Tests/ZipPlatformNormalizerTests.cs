@@ -21,7 +21,7 @@ public class ZipPlatformNormalizerTests
 
         ZipPlatformNormalizer.Normalize(archive);
 
-        AssertNormalized(archive);
+        AssertNormalized(archive.ToArray());
     }
 
     // The end-to-end guarantee: whatever OS runs the conversion, the central
@@ -31,7 +31,22 @@ public class ZipPlatformNormalizerTests
     {
         using var result = DeterministicPackage.Convert(BuildArchive());
 
-        AssertNormalized(result);
+        AssertNormalized(result.ToArray());
+    }
+
+    // A non-seekable / non-MemoryStream target can't be patched in place, so
+    // Convert must route it through the buffered path and still emit normalized
+    // bytes. This is the same path nested-zip recursion uses.
+    [Test]
+    public void NonMemoryStreamTargetIsNormalizedViaFallback()
+    {
+        var inner = new MemoryStream();
+        using (var target = new WriteOnlyStream(inner))
+        {
+            DeterministicPackage.Convert(BuildArchive(), target);
+        }
+
+        AssertNormalized(inner.ToArray());
     }
 
     // The low byte of "version made by" encodes the spec version (a function of
@@ -56,20 +71,18 @@ public class ZipPlatformNormalizerTests
         Assert.That(after, Is.EqualTo(before));
     }
 
-    static void AssertNormalized(MemoryStream archive)
+    static void AssertNormalized(byte[] archive)
     {
-        var buffer = archive.GetBuffer();
-        var length = (int) archive.Length;
-        var records = CentralDirectoryRecords(buffer, length);
+        var records = CentralDirectoryRecords(archive, archive.Length);
 
         Assert.That(records, Is.Not.Empty);
         foreach (var record in records)
         {
             Assert.Multiple(() =>
             {
-                Assert.That(buffer[record + 5], Is.EqualTo(0),
+                Assert.That(archive[record + 5], Is.EqualTo(0),
                     "host-OS byte must be normalized to 0");
-                Assert.That(BinaryPrimitives.ReadUInt32LittleEndian(buffer.AsSpan(record + 38)), Is.EqualTo(0u),
+                Assert.That(BinaryPrimitives.ReadUInt32LittleEndian(archive.AsSpan(record + 38)), Is.EqualTo(0u),
                     "external file attributes must be cleared");
             });
         }
@@ -125,5 +138,21 @@ public class ZipPlatformNormalizerTests
         }
 
         return records;
+    }
+
+    // Write-only, non-seekable stream that forwards to an inner stream, forcing
+    // Convert down its buffered fallback path (target is not a MemoryStream).
+    class WriteOnlyStream(Stream inner) : Stream
+    {
+        public override bool CanWrite => true;
+        public override bool CanRead => false;
+        public override bool CanSeek => false;
+        public override void Write(byte[] buffer, int offset, int count) => inner.Write(buffer, offset, count);
+        public override void Flush() => inner.Flush();
+        public override long Length => throw new NotSupportedException();
+        public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 }

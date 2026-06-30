@@ -20,20 +20,22 @@ public static partial class DeterministicPackage
 
     public static void Convert(Stream source, Stream target)
     {
-        var patchers = CreatePatchers();
-        using var sourceArchive = ReadArchive(source);
-
-        // Build into a buffer first so the central directory can be normalized
-        // (see ZipPlatformNormalizer) before the bytes reach the caller's stream.
-        using var buffer = new MemoryStream();
-        using (var targetArchive = CreateArchive(buffer))
+        // The central directory can only be normalized (see ZipPlatformNormalizer)
+        // after the whole archive is written, and that needs random access to the
+        // bytes. A MemoryStream whose buffer is reachable gives us that in place;
+        // for anything else (a non-seekable entry stream from nested-zip recursion,
+        // or a MemoryStream wrapping a caller-owned array) build into a buffer and
+        // copy the normalized result out.
+        if (target is MemoryStream memoryTarget &&
+            memoryTarget.TryGetBuffer(out _))
         {
-            foreach (var sourceEntry in sourceArchive.OrderedEntries())
-            {
-                DuplicateEntry(sourceEntry, targetArchive, patchers);
-            }
+            WriteArchive(source, memoryTarget);
+            ZipPlatformNormalizer.Normalize(memoryTarget);
+            return;
         }
 
+        using var buffer = new MemoryStream();
+        WriteArchive(source, buffer);
         ZipPlatformNormalizer.Normalize(buffer);
         buffer.Position = 0;
         buffer.CopyTo(target);
@@ -41,21 +43,41 @@ public static partial class DeterministicPackage
 
     public static async Task ConvertAsync(Stream source, Stream target, Cancel token = default)
     {
-        var patchers = CreatePatchers();
-        using var sourceArchive = ReadArchive(source);
-
-        using var buffer = new MemoryStream();
-        using (var targetArchive = CreateArchive(buffer))
+        if (target is MemoryStream memoryTarget &&
+            memoryTarget.TryGetBuffer(out _))
         {
-            foreach (var sourceEntry in sourceArchive.OrderedEntries())
-            {
-                await DuplicateEntryAsync(sourceEntry, targetArchive, patchers, token);
-            }
+            await WriteArchiveAsync(source, memoryTarget, token);
+            ZipPlatformNormalizer.Normalize(memoryTarget);
+            return;
         }
 
+        using var buffer = new MemoryStream();
+        await WriteArchiveAsync(source, buffer, token);
         ZipPlatformNormalizer.Normalize(buffer);
         buffer.Position = 0;
         await buffer.CopyToAsync(target, token);
+    }
+
+    static void WriteArchive(Stream source, Stream target)
+    {
+        var patchers = CreatePatchers();
+        using var sourceArchive = ReadArchive(source);
+        using var targetArchive = CreateArchive(target);
+        foreach (var sourceEntry in sourceArchive.OrderedEntries())
+        {
+            DuplicateEntry(sourceEntry, targetArchive, patchers);
+        }
+    }
+
+    static async Task WriteArchiveAsync(Stream source, Stream target, Cancel token)
+    {
+        var patchers = CreatePatchers();
+        using var sourceArchive = ReadArchive(source);
+        using var targetArchive = CreateArchive(target);
+        foreach (var sourceEntry in sourceArchive.OrderedEntries())
+        {
+            await DuplicateEntryAsync(sourceEntry, targetArchive, patchers, token);
+        }
     }
 
     // ZIP local file header signature ("PK\x03\x04").

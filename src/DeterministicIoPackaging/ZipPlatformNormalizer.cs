@@ -26,7 +26,14 @@ static class ZipPlatformNormalizer
 
     public static void Normalize(MemoryStream archive)
     {
-        var buffer = archive.GetBuffer();
+        if (!archive.TryGetBuffer(out var segment))
+        {
+            // Buffer is not reachable (caller-owned array); nothing we can patch
+            // in place. Convert routes these through the buffered path instead.
+            return;
+        }
+
+        var buffer = segment.Array!;
         var length = (int) archive.Length;
 
         if (!TryFindEndOfCentralDirectory(buffer, length, out var eocd))
