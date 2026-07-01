@@ -1,9 +1,16 @@
 static class RelationshipRenumber
 {
     static XNamespace r = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+    // ISO/IEC 29500 Strict variant of the relationships namespace. "Strict Open XML Document" (Word)
+    // and Aspose's Iso29500_2008_Strict emit r:id/r:embed/r:link in this namespace; without matching
+    // it, RemapIds would leave those references pointing at the pre-renumber ids (dangling).
+    static XNamespace rStrict = "http://purl.oclc.org/ooxml/officeDocument/relationships";
     static XName rId = r + "id";
     static XName rEmbed = r + "embed";
     static XName rLink = r + "link";
+    static XName rIdStrict = rStrict + "id";
+    static XName rEmbedStrict = rStrict + "embed";
+    static XName rLinkStrict = rStrict + "link";
 
     public static Dictionary<string, string> RenumberAndSort(XDocument xml, string? entryName = null)
     {
@@ -87,7 +94,8 @@ static class RelationshipRenumber
             for (var attr = descendant.FirstAttribute; attr != null; attr = attr.NextAttribute)
             {
                 var name = attr.Name;
-                if ((name == rId || name == rEmbed || name == rLink) &&
+                if ((name == rId || name == rEmbed || name == rLink ||
+                     name == rIdStrict || name == rEmbedStrict || name == rLinkStrict) &&
                     mapping.TryGetValue(attr.Value, out var newId))
                 {
                     attr.SetValue(newId);

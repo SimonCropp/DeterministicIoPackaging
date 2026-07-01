@@ -1,0 +1,10 @@
+﻿<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:rs="http://purl.oclc.org/ooxml/officeDocument/relationships">
+  <w:body>
+    <w:hyperlink r:id="DeterministicId1" />
+    <w:blip r:embed="DeterministicId2" />
+    <w:externalLink r:link="DeterministicId3" />
+    <w:hyperlink rs:id="DeterministicId1" />
+    <w:blip rs:embed="DeterministicId2" />
+    <w:externalLink rs:link="DeterministicId3" />
+  </w:body>
+</w:document>
