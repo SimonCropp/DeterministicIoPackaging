@@ -9,11 +9,14 @@ public static partial class DeterministicPackage
     // and patched in place with no extra copy.
     public static MemoryStream Convert(Stream source)
     {
-        var patchers = CreatePatchers();
         var target = new MemoryStream();
         using (var sourceArchive = ReadArchive(source))
         using (var targetArchive = CreateArchive(target))
         {
+            // Part names must be known before patching begins so the
+            // ContentTypesPatcher can canonicalize the content-type map against
+            // every part in the package, not just the ones the input map lists.
+            var patchers = CreatePatchers(CollectPartNames(sourceArchive));
             foreach (var sourceEntry in sourceArchive.OrderedEntries())
             {
                 DuplicateEntry(sourceEntry, targetArchive, patchers);
@@ -27,11 +30,11 @@ public static partial class DeterministicPackage
 
     public static async Task<MemoryStream> ConvertAsync(Stream source, Cancel token = default)
     {
-        var patchers = CreatePatchers();
         var target = new MemoryStream();
         using (var sourceArchive = ReadArchive(source))
         using (var targetArchive = CreateArchive(target))
         {
+            var patchers = CreatePatchers(CollectPartNames(sourceArchive));
             foreach (var sourceEntry in sourceArchive.OrderedEntries())
             {
                 await DuplicateEntryAsync(sourceEntry, targetArchive, patchers, token);
@@ -41,6 +44,26 @@ public static partial class DeterministicPackage
         ZipPlatformNormalizer.Normalize(target);
         target.Position = 0;
         return target;
+    }
+
+    // Every part in the package, as leading-slash PartName values, for the
+    // ContentTypesPatcher. [Content_Types].xml is not itself a part, and skipped
+    // entries are dropped from the output, so neither belongs in the map.
+    static IReadOnlyCollection<string> CollectPartNames(Archive archive)
+    {
+        var partNames = new List<string>();
+        foreach (var entry in archive.Entries)
+        {
+            if (entry.FullName is "[Content_Types].xml" ||
+                IsSkippedEntry(entry))
+            {
+                continue;
+            }
+
+            partNames.Add(ContentTypesPatcher.ToPartName(entry.FullName));
+        }
+
+        return partNames;
     }
 
     // ZIP local file header signature ("PK\x03\x04").
