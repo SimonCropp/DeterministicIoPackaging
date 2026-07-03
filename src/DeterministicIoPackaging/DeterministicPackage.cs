@@ -5,7 +5,7 @@ public static partial class DeterministicPackage
     public static DateTime StableDate { get; } = new(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     public static DateTimeOffset StableDateOffset { get; } = new(StableDate);
 
-    static PatcherSet CreatePatchers()
+    static PatcherSet CreatePatchers(IReadOnlyCollection<string> partNames)
     {
         var workbookRelsPatcher = new WorkbookRelationshipPatcher();
         var documentRelsPatcher = new DocumentRelationshipPatcher();
@@ -14,7 +14,7 @@ public static partial class DeterministicPackage
         var pptxRelsPatcher = new PptxRelationshipPatcher();
         IReadOnlyList<IPatcher> patchers =
         [
-            new ContentTypesPatcher(),
+            new ContentTypesPatcher(partNames),
             new RelationshipPatcher(),
             sheetRelsPatcher,
             new SheetPatcher(sheetRelsPatcher),
