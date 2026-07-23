@@ -102,18 +102,25 @@ Snapshot tests use the Verify library:
 
 - `.verified.*` files are the baseline/expected output
 - `.received.*` files are generated when tests fail (showing actual output)
-- Update snapshots by moving `.received.*` files to `.verified.*`
 - Framework-specific snapshots: `.DotNet9_0.verified.*`, `.Net4_8.verified.*`
 - Generic snapshots: `.DotNet.verified.*`, `.Net.verified.*`
 
-To accept new snapshots after intentional changes:
-```bash
-# Accept all new snapshots
-find . -name "*.received.*" -exec sh -c 'mv "$1" "$(echo "$1" | sed 's/\.received\././')"' _ {} \;
+**The received and verified names are not the same.** The tests multi-target and use `UniqueForRuntime()`, so a received file carries the runtime *and version* while its verified file carries only the runtime. Accepting is a mapping, not a rename of `.received.` to `.verified.`:
 
-# Or manually for specific tests
-cp Tests.SomeTest.DotNet.DotNet9_0.received.xml Tests.SomeTest.DotNet.verified.xml
 ```
+Tests.SomeTest.DotNet9_0.received.xml   ->   Tests.SomeTest.DotNet.verified.xml
+Tests.SomeTest.Net4_8.received.xml      ->   Tests.SomeTest.Net.verified.xml
+```
+
+Renaming in place writes a second snapshot corpus that no test reads, leaving the real baseline stale and the suite still failing. So do not bulk rename with `find`/`sed`.
+
+To accept, either take the destination from the `Verified:` line of the failure message, or use the tool, which does that mapping:
+
+```bash
+dotnet verify accept
+```
+
+Run it from the repository root. It pairs each received file with the verified file beside it, which covers updating an existing baseline. A brand new snapshot has no baseline to pair with, so add both the `.DotNet.` and `.Net.` files by hand.
 
 ## Project Structure
 
