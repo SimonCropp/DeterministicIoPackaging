@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>detpackage</ToolCommandName>
+    <SignAssembly>false</SignAssembly>
+    <RollForward>LatestMajor</RollForward>
+    <PackageTags>packaging, opc, nupkg, xlsx, docx, pptx, deterministic, reproducible, cli, dotnet-tool</PackageTags>
+    <Description>Command line tool that modifies System.IO.Packaging files (nupkg, xlsx, docx, pptx) to ensure they are deterministic. Helpful for testing, build reproducibility, security verification, and ensuring package integrity across different build environments.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="CliFx" />
+    <PackageReference Include="ProjectDefaults" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Sbom.Targets" PrivateAssets="all" Condition="'$(CI)' == 'true'" />
+    <ProjectReference Include="..\DeterministicIoPackaging\DeterministicIoPackaging.csproj" />
+  </ItemGroup>
+</Project>
