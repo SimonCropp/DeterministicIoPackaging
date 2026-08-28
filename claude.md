@@ -127,5 +127,8 @@ Run it from the repository root. It pairs each received file with the verified f
 - `src/DeterministicIoPackaging/` - Main library
   - `Patching/` - XML patchers for different file types
   - `DeterministicPackage.cs` - Entry point with patcher registration
+- `src/DeterministicIoPackaging.Tool/` - `detpackage`, the CliFx dotnet tool wrapping `DeterministicPackage.ConvertAsync`
+  - `ConvertCommand.cs` - the single (default) command
+  - `FileResolver.cs` - expands the path parameter into source/target file pairs
 - `src/Tests/` - Tests using Verify for snapshot testing
 - `tools/` - Utility projects (e.g., CreateDocx for generating test files)

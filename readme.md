@@ -80,6 +80,56 @@ var target = await DeterministicPackage.ConvertAsync(sourceStream);
 <!-- endSnippet -->
 
 
+## CLI tool
+
+A [dotnet tool](https://learn.microsoft.com/en-us/dotnet/core/tools/global-tools) that applies the same conversion to files on disk.
+
+ * https://nuget.org/packages/DeterministicIoPackaging.Tool
+
+```
+dotnet tool install -g DeterministicIoPackaging.Tool
+```
+
+
+### Usage
+
+```
+detpackage <path> [options]
+```
+
+`path` is a package file, or a directory containing packages. It is converted in place unless `--target` is used.
+
+ * `-t|--target` Write results here instead of modifying the input in place. An output file path when the input is a file, otherwise a directory mirroring the input tree.
+ * `-p|--pattern` Search patterns applied when the input is a directory. Defaults to every known package extension: `*.nupkg`, `*.snupkg`, `*.vsix`, `*.docx`, `*.docm`, `*.dotx`, `*.xlsx`, `*.xlsm`, `*.xltx`, `*.pptx`, `*.pptm`, `*.potx`. Repeat the option for multiple patterns.
+ * `-r|--recursive` Recurse into subdirectories when the input is a directory.
+ * `--check` Report which packages are not already deterministic without writing anything. Exits with code 1 if any are found.
+ * `--continue-on-error` Keep processing the remaining files after a failure, then exit with code 1.
+ * `-q|--quiet` Suppress per file and summary output. Errors are still written.
+
+A package that is already deterministic is left untouched, so an in place run does not disturb its timestamp.
+
+
+### Examples
+
+Convert one package in place:
+
+```
+detpackage MyPackage.1.0.0.nupkg
+```
+
+Convert a tree into a separate output directory:
+
+```
+detpackage ./input -r --target ./output
+```
+
+Fail a build when any package is not deterministic:
+
+```
+detpackage ./artifacts -r --check
+```
+
+
 ## Icon
 
 [Pi](https://thenounproject.com/icon/pi-2131020/) designed by [Zaidan](https://thenounproject.com/creator/mzaidanfiros/) from [The Noun Project](https://thenounproject.com).
