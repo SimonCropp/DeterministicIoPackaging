@@ -11,3 +11,4 @@ src/Tests/~*
 .claude/settings.local.json
 /src/BenchmarkDotNet.Artifacts
 /src/Tests/TestResults
+*.lnk
