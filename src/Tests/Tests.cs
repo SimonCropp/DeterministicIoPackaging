@@ -275,6 +275,38 @@ public class Tests
         return target;
     }
 
+    static MemoryStream ConvertReportingChanges(string packagePath)
+    {
+        #region ConvertChanges
+
+        using var sourceStream = File.OpenRead(packagePath);
+        var target = DeterministicPackage.Convert(sourceStream, out var changes);
+        foreach (var change in changes)
+        {
+            Console.WriteLine($"{change.Kind} {change.Entry}");
+        }
+
+        #endregion
+
+        return target;
+    }
+
+    static async Task<byte[]> ConvertReportingChangesAsync(string packagePath)
+    {
+        #region ConvertChangesAsync
+
+        using var sourceStream = File.OpenRead(packagePath);
+        using var result = await DeterministicPackage.ConvertWithChangesAsync(sourceStream);
+        foreach (var change in result.Changes)
+        {
+            Console.WriteLine($"{change.Kind} {change.Entry}");
+        }
+
+        #endregion
+
+        return result.Stream.ToArray();
+    }
+
 
     static async Task<MemoryStream> ConvertAsync(Extension extension)
     {

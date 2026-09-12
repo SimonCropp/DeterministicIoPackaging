@@ -44,10 +44,11 @@ public static partial class DeterministicPackage
         return new(source, ZipArchiveMode.Read, leaveOpen: true);
     }
 
-    static void DuplicateEntry(Entry sourceEntry, Archive targetArchive, PatcherSet currentPatchers)
+    static void DuplicateEntry(Entry sourceEntry, Archive targetArchive, PatcherSet currentPatchers, ChangeRecorder? recorder)
     {
         if (IsSkippedEntry(sourceEntry))
         {
+            recorder?.Record(ConvertChangeKind.Removed, sourceEntry.FullName);
             return;
         }
 
@@ -59,32 +60,92 @@ public static partial class DeterministicPackage
         if (patcher != null)
         {
             var xml = XDocument.Load(sourceStream);
+            var before = Snapshot(xml, recorder);
             patcher.PatchXml(xml, sourceEntry.FullName);
+            RecordIfPatched(before, xml, recorder, sourceEntry.FullName);
             SaveXml(xml, targetStream);
             return;
         }
 
         if (sourceEntry.FullName.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
         {
-            PngNormalizer.Normalize(sourceStream, targetStream);
+            NormalizePng(sourceStream, targetStream, recorder, sourceEntry.FullName);
             return;
         }
 
         if (IsSpreadsheetXml(sourceEntry))
         {
             var xml = XDocument.Load(sourceStream);
+            var before = Snapshot(xml, recorder);
             FixPrefixedDefaultNamespace(xml);
+            RecordIfPatched(before, xml, recorder, sourceEntry.FullName);
             SaveXml(xml, targetStream);
             return;
         }
 
-        CopyOrRecurseZip(sourceStream, targetStream, sourceEntry.Length);
+        CopyOrRecurseZip(sourceStream, targetStream, sourceEntry.Length, recorder, sourceEntry.FullName);
     }
 
-    static async Task DuplicateEntryAsync(Entry sourceEntry, Archive targetArchive, PatcherSet currentPatchers, Cancel cancel)
+    // The part as loaded, serialized, so it can be compared against the part as patched. Only when a
+    // report was asked for: this is pure cost for a caller that just wants the bytes.
+    //
+    // Deliberately the loaded tree rather than the source bytes. Load drops insignificant
+    // whitespace, so a prettified input and a compact one give the same snapshot, and the comparison
+    // reports only what a patcher actually did — not the reserialization every XML part gets anyway.
+    static string? Snapshot(XDocument xml, ChangeRecorder? recorder)
+    {
+        if (recorder == null)
+        {
+            return null;
+        }
+
+        return xml.ToString(SaveOptions.DisableFormatting);
+    }
+
+    // Serialized comparison rather than XNode.DeepEquals, which is wrong here: DeepEquals compares
+    // the attribute lists, and RelationshipRenumber rebuilds the root's children in a way that drops
+    // the root's xmlns declaration attribute. The element names still carry the namespace, so the
+    // declaration is re-emitted on save and the output is byte-identical — but DeepEquals reports a
+    // difference, which made every .rels part of an already converted package report as patched.
+    static void RecordIfPatched(string? before, XDocument after, ChangeRecorder? recorder, string entryName)
+    {
+        if (before == null ||
+            before == after.ToString(SaveOptions.DisableFormatting))
+        {
+            return;
+        }
+
+        recorder!.Record(ConvertChangeKind.Patched, entryName);
+    }
+
+    // PngNormalizer streams source to target, so the only way to know whether it changed anything is
+    // to buffer the output and compare. Worth it only when a report was asked for; otherwise this
+    // writes straight through as it always has.
+    static void NormalizePng(Stream sourceStream, Stream targetStream, ChangeRecorder? recorder, string entryName)
+    {
+        if (recorder == null)
+        {
+            PngNormalizer.Normalize(sourceStream, targetStream);
+            return;
+        }
+
+        using var before = new MemoryStream();
+        sourceStream.CopyTo(before);
+        before.Position = 0;
+
+        using var after = new MemoryStream();
+        PngNormalizer.Normalize(before, after);
+
+        RecordIfDifferent(before, after, recorder, entryName);
+        after.Position = 0;
+        after.CopyTo(targetStream);
+    }
+
+    static async Task DuplicateEntryAsync(Entry sourceEntry, Archive targetArchive, PatcherSet currentPatchers, ChangeRecorder? recorder, Cancel cancel)
     {
         if (IsSkippedEntry(sourceEntry))
         {
+            recorder?.Record(ConvertChangeKind.Removed, sourceEntry.FullName);
             return;
         }
 
@@ -96,26 +157,51 @@ public static partial class DeterministicPackage
         if (patcher != null)
         {
             var xml = await XDocument.LoadAsync(sourceStream, LoadOptions.None, cancel);
+            var before = Snapshot(xml, recorder);
             patcher.PatchXml(xml, sourceEntry.FullName);
+            RecordIfPatched(before, xml, recorder, sourceEntry.FullName);
             await SaveXml(xml, targetStream, cancel);
             return;
         }
 
         if (sourceEntry.FullName.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
         {
-            await PngNormalizer.NormalizeAsync(sourceStream, targetStream, cancel);
+            await NormalizePngAsync(sourceStream, targetStream, recorder, sourceEntry.FullName, cancel);
             return;
         }
 
         if (IsSpreadsheetXml(sourceEntry))
         {
             var xml = await XDocument.LoadAsync(sourceStream, LoadOptions.None, cancel);
+            var before = Snapshot(xml, recorder);
             FixPrefixedDefaultNamespace(xml);
+            RecordIfPatched(before, xml, recorder, sourceEntry.FullName);
             await SaveXml(xml, targetStream, cancel);
             return;
         }
 
-        await CopyOrRecurseZipAsync(sourceStream, targetStream, sourceEntry.Length, cancel);
+        await CopyOrRecurseZipAsync(sourceStream, targetStream, sourceEntry.Length, recorder, sourceEntry.FullName, cancel);
+    }
+
+    /// <inheritdoc cref="NormalizePng"/>
+    static async Task NormalizePngAsync(Stream sourceStream, Stream targetStream, ChangeRecorder? recorder, string entryName, Cancel cancel)
+    {
+        if (recorder == null)
+        {
+            await PngNormalizer.NormalizeAsync(sourceStream, targetStream, cancel);
+            return;
+        }
+
+        using var before = new MemoryStream();
+        await sourceStream.CopyToAsync(before, cancel);
+        before.Position = 0;
+
+        using var after = new MemoryStream();
+        await PngNormalizer.NormalizeAsync(before, after, cancel);
+
+        RecordIfDifferent(before, after, recorder, entryName);
+        after.Position = 0;
+        await after.CopyToAsync(targetStream, cancel);
     }
 
     static bool IsSpreadsheetXml(Entry entry) =>

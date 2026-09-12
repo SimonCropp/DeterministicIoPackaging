@@ -7,7 +7,25 @@ public static partial class DeterministicPackage
     // (see ZipPlatformNormalizer) — all of which need the whole archive in a
     // seekable buffer. The result is therefore always a fresh MemoryStream, built
     // and patched in place with no extra copy.
-    public static MemoryStream Convert(Stream source)
+    public static MemoryStream Convert(Stream source) => Convert(source, (ChangeRecorder?) null);
+
+    /// <summary>
+    /// Converts <paramref name="source"/> and reports what changed.
+    /// </summary>
+    /// <param name="source">The package to convert.</param>
+    /// <param name="changes">
+    /// What actually differed. Empty for a package that was already deterministic, since only
+    /// differences are recorded — see <see cref="ConvertChange"/> for what is deliberately left out.
+    /// </param>
+    public static MemoryStream Convert(Stream source, out IReadOnlyList<ConvertChange> changes)
+    {
+        var recorder = new ChangeRecorder();
+        var target = Convert(source, recorder);
+        changes = recorder.Changes;
+        return target;
+    }
+
+    static MemoryStream Convert(Stream source, ChangeRecorder? recorder)
     {
         var target = new MemoryStream();
         using (var sourceArchive = ReadArchive(source))
@@ -17,9 +35,11 @@ public static partial class DeterministicPackage
             // ContentTypesPatcher can canonicalize the content-type map against
             // every part in the package, not just the ones the input map lists.
             var patchers = CreatePatchers(CollectPartNames(sourceArchive));
-            foreach (var sourceEntry in sourceArchive.OrderedEntries())
+            var ordered = sourceArchive.OrderedEntries().ToList();
+            RecordOrder(sourceArchive, ordered, recorder);
+            foreach (var sourceEntry in ordered)
             {
-                DuplicateEntry(sourceEntry, targetArchive, patchers);
+                DuplicateEntry(sourceEntry, targetArchive, patchers, recorder);
             }
         }
 
@@ -28,16 +48,36 @@ public static partial class DeterministicPackage
         return target;
     }
 
-    public static async Task<MemoryStream> ConvertAsync(Stream source, Cancel token = default)
+    public static Task<MemoryStream> ConvertAsync(Stream source, Cancel token = default) =>
+        ConvertAsync(source, null, token);
+
+    /// <summary>
+    /// Converts <paramref name="source"/> and reports what changed.
+    /// </summary>
+    /// <remarks>
+    /// The report comes back beside the stream rather than through an <c>out</c> parameter, which an
+    /// async method cannot have. The synchronous
+    /// <see cref="Convert(Stream, out IReadOnlyList{ConvertChange})"/> uses <c>out</c>, since it can.
+    /// </remarks>
+    public static async Task<ConvertResult> ConvertWithChangesAsync(Stream source, Cancel token = default)
+    {
+        var recorder = new ChangeRecorder();
+        var target = await ConvertAsync(source, recorder, token);
+        return new(target, recorder.Changes);
+    }
+
+    static async Task<MemoryStream> ConvertAsync(Stream source, ChangeRecorder? recorder, Cancel token)
     {
         var target = new MemoryStream();
         using (var sourceArchive = ReadArchive(source))
         using (var targetArchive = CreateArchive(target))
         {
             var patchers = CreatePatchers(CollectPartNames(sourceArchive));
-            foreach (var sourceEntry in sourceArchive.OrderedEntries())
+            var ordered = sourceArchive.OrderedEntries().ToList();
+            RecordOrder(sourceArchive, ordered, recorder);
+            foreach (var sourceEntry in ordered)
             {
-                await DuplicateEntryAsync(sourceEntry, targetArchive, patchers, token);
+                await DuplicateEntryAsync(sourceEntry, targetArchive, patchers, recorder, token);
             }
         }
 
@@ -45,6 +85,14 @@ public static partial class DeterministicPackage
         target.Position = 0;
         return target;
     }
+
+    // The source listing against the order the entries are about to be written in, with the dropped
+    // entries excluded from both: those are already reported as removed, and their absence is not a
+    // reordering.
+    static void RecordOrder(Archive sourceArchive, IEnumerable<Entry> ordered, ChangeRecorder? recorder) =>
+        recorder?.RecordOrder(
+            sourceArchive.Entries.Where(_ => !IsSkippedEntry(_)).Select(_ => _.FullName),
+            ordered.Where(_ => !IsSkippedEntry(_)).Select(_ => _.FullName));
 
     // Every part in the package, as leading-slash PartName values, for the
     // ContentTypesPatcher. [Content_Types].xml is not itself a part, and skipped
@@ -99,7 +147,7 @@ public static partial class DeterministicPackage
     // packages flow through with whatever non-deterministic deflate/timestamps
     // their producer emitted, defeating the deterministic guarantee for the
     // outer package.
-    static void CopyOrRecurseZip(Stream source, Stream target, long sourceLength)
+    static void CopyOrRecurseZip(Stream source, Stream target, long sourceLength, ChangeRecorder? recorder, string entryName)
     {
         var head = new byte[4];
         var read = ReadUpTo(source, head, 4);
@@ -113,7 +161,11 @@ public static partial class DeterministicPackage
             buffer.Write(head, 0, read);
             source.CopyTo(buffer);
             buffer.Position = 0;
-            using var normalized = Convert(buffer);
+            using var normalized = Convert(buffer, (ChangeRecorder?) null);
+            // Both halves are already resident, so the comparison is the cheap part here. The nested
+            // package's own changes are not reported individually: the outer entry is the part of
+            // this package that differs.
+            RecordIfDifferent(buffer, normalized, recorder, entryName);
             normalized.CopyTo(target);
             return;
         }
@@ -126,7 +178,7 @@ public static partial class DeterministicPackage
         source.CopyTo(target);
     }
 
-    static async Task CopyOrRecurseZipAsync(Stream source, Stream target, long sourceLength, Cancel cancel)
+    static async Task CopyOrRecurseZipAsync(Stream source, Stream target, long sourceLength, ChangeRecorder? recorder, string entryName, Cancel cancel)
     {
         var head = new byte[4];
         var read = await ReadUpToAsync(source, head, 4, cancel);
@@ -139,7 +191,8 @@ public static partial class DeterministicPackage
             await buffer.WriteAsync(head, 0, read, cancel);
             await source.CopyToAsync(buffer, cancel);
             buffer.Position = 0;
-            using var normalized = await ConvertAsync(buffer, cancel);
+            using var normalized = await ConvertAsync(buffer, null, cancel);
+            RecordIfDifferent(buffer, normalized, recorder, entryName);
             await normalized.CopyToAsync(target, cancel);
             return;
         }
@@ -150,6 +203,33 @@ public static partial class DeterministicPackage
         }
 
         await source.CopyToAsync(target, cancel);
+    }
+
+    static void RecordIfDifferent(MemoryStream before, MemoryStream after, ChangeRecorder? recorder, string entryName)
+    {
+        if (recorder == null ||
+            SameBytes(before, after))
+        {
+            return;
+        }
+
+        recorder.Record(ConvertChangeKind.Patched, entryName);
+    }
+
+    static bool SameBytes(MemoryStream left, MemoryStream right)
+    {
+        if (left.Length != right.Length)
+        {
+            return false;
+        }
+
+        if (!left.TryGetBuffer(out var leftBuffer) ||
+            !right.TryGetBuffer(out var rightBuffer))
+        {
+            return left.ToArray().AsSpan().SequenceEqual(right.ToArray());
+        }
+
+        return leftBuffer.AsSpan().SequenceEqual(rightBuffer.AsSpan());
     }
 
     // Clamp a ZipArchiveEntry.Length to a valid MemoryStream initial capacity.

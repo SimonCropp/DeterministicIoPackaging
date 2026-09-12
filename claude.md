@@ -122,6 +122,32 @@ dotnet verify accept
 
 Run it from the repository root. It pairs each received file with the verified file beside it, which covers updating an existing baseline. A brand new snapshot has no baseline to pair with, so add both the `.DotNet.` and `.Net.` files by hand.
 
+## The change report
+
+`Convert(Stream, out IReadOnlyList<ConvertChange>)` and `ConvertWithChangesAsync(Stream, Cancel)`
+report what the conversion changed. Async returns a `ConvertResult` rather than using `out`, which an
+async method cannot have.
+
+The rule that makes the report worth anything: **only a real difference is recorded**, never the fact
+that a pass ran. This conversion rewrites every entry whether or not anything about it was
+non-deterministic, so "we touched it" would be true of every part of every package and would say
+nothing. Detecting a real difference costs something — serializing an XML part before patching it,
+buffering a PNG so the output can be compared — so a `ChangeRecorder` exists only when a caller asked
+for one and every other path passes `null`, leaving the existing code paths byte-for-byte as they
+were.
+
+Two things worth knowing before touching `RecordIfPatched`:
+
+- **It compares serialized strings, not `XNode.DeepEquals`.** `DeepEquals` compares attribute lists,
+  and `RelationshipRenumber` rebuilds the root's children in a way that drops the root's `xmlns`
+  declaration *attribute*. The element names still carry the namespace, so the declaration is
+  re-emitted on save and the bytes are identical — but `DeepEquals` reports a difference, which made
+  every `.rels` part of an already converted package report as patched. `ConvertChangeTests`
+  `ReportsNothingOnASecondConversion` is what caught it and is what keeps it caught.
+- **The "before" is the loaded tree, not the source bytes.** `XDocument.Load` drops insignificant
+  whitespace, so a prettified input and a compact one snapshot the same. Comparing source bytes
+  instead would report every XML part of every prettified package and bury the one that mattered.
+
 ## Project Structure
 
 - `src/DeterministicIoPackaging/` - Main library
