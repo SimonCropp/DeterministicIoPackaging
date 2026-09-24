@@ -1,6 +1,6 @@
 # <img src="/src/icon.png" height="30px"> DeterministicIoPackaging
 
-[![Build status](https://img.shields.io/appveyor/build/SimonCropp/deterministiciopackaging)](https://ci.appveyor.com/project/SimonCropp/deterministiciopackaging)
+[![Build status](https://github.com/SimonCropp/DeterministicIoPackaging/actions/workflows/build.yml/badge.svg)](https://github.com/SimonCropp/DeterministicIoPackaging/actions/workflows/build.yml)
 [![NuGet Status](https://img.shields.io/nuget/v/DeterministicIoPackaging.svg)](https://www.nuget.org/packages/DeterministicIoPackaging/)
 
 Modify [System.IO.Packaging](https://learn.microsoft.com/en-us/dotnet/api/system.io.packaging) files to ensure they are deterministic. Helpful for testing, build reproducibility, security verification, and ensuring package integrity across different build environments.
