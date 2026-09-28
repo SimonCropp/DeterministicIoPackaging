@@ -1,4 +1,5 @@
-﻿[TestFixture]
+﻿namespace DeterministicIoPackagingTests;
+
 public class Tests
 {
     [Test]
@@ -39,7 +40,7 @@ public class Tests
     }
 
     [Test]
-    public void NumberingBinaryEquality()
+    public async Task NumberingBinaryEquality()
     {
         var file1 = Path.Combine(directory, "samples.numbering1_1.docx");
         var file2 = Path.Combine(directory, "samples.numbering1_2.docx");
@@ -50,11 +51,11 @@ public class Tests
         var bytes1 = stream1.ToArray();
         var bytes2 = stream2.ToArray();
 
-        Assert.That(bytes1, Is.EqualTo(bytes2));
+        await Assert.That(bytes1).IsEquivalentTo(bytes2, CollectionOrdering.Matching);
     }
 
     [Test]
-    public void NumberingBinaryEquality2()
+    public async Task NumberingBinaryEquality2()
     {
         var file1 = Path.Combine(directory, "samples.numbering2_1.docx");
         var file2 = Path.Combine(directory, "samples.numbering2_2.docx");
@@ -65,11 +66,11 @@ public class Tests
         var bytes1 = stream1.ToArray();
         var bytes2 = stream2.ToArray();
 
-        Assert.That(bytes1, Is.EqualTo(bytes2));
+        await Assert.That(bytes1).IsEquivalentTo(bytes2, CollectionOrdering.Matching);
     }
 
     [Test]
-    public void PngImageBinaryEquality()
+    public async Task PngImageBinaryEquality()
     {
         var file1 = Path.Combine(directory, "samples.pngImage_1.docx");
         var file2 = Path.Combine(directory, "samples.pngImage_2.docx");
@@ -80,7 +81,7 @@ public class Tests
         var bytes1 = stream1.ToArray();
         var bytes2 = stream2.ToArray();
 
-        Assert.That(bytes1, Is.EqualTo(bytes2));
+        await Assert.That(bytes1).IsEquivalentTo(bytes2, CollectionOrdering.Matching);
     }
 
     [Test]
@@ -94,7 +95,10 @@ public class Tests
     }
 
     [Test]
-    public Task Run([Values] Extension extension)
+    [Arguments(Extension.xlsx)]
+    [Arguments(Extension.nupkg)]
+    [Arguments(Extension.docx)]
+    public Task Run(Extension extension)
     {
         var stream = Convert(extension);
 
@@ -102,7 +106,10 @@ public class Tests
     }
 
     [Test]
-    public async Task RunAsync([Values] Extension extension)
+    [Arguments(Extension.xlsx)]
+    [Arguments(Extension.nupkg)]
+    [Arguments(Extension.docx)]
+    public async Task RunAsync(Extension extension)
     {
         var stream = await ConvertAsync(extension);
 
@@ -110,7 +117,10 @@ public class Tests
     }
 
     [Test]
-    public Task RunBinary([Values] Extension extension)
+    [Arguments(Extension.xlsx)]
+    [Arguments(Extension.nupkg)]
+    [Arguments(Extension.docx)]
+    public Task RunBinary(Extension extension)
     {
         var stream = Convert(extension);
 
@@ -119,7 +129,10 @@ public class Tests
     }
 
     [Test]
-    public async Task RunBinaryAsync([Values] Extension extension)
+    [Arguments(Extension.xlsx)]
+    [Arguments(Extension.nupkg)]
+    [Arguments(Extension.docx)]
+    public async Task RunBinaryAsync(Extension extension)
     {
         var stream = await ConvertAsync(extension);
 
@@ -128,7 +141,10 @@ public class Tests
     }
 
     [Test]
-    public void RelationshipIdsAreDeterministic([Values] Extension extension)
+    [Arguments(Extension.xlsx)]
+    [Arguments(Extension.nupkg)]
+    [Arguments(Extension.docx)]
+    public async Task RelationshipIdsAreDeterministic(Extension extension)
     {
         var stream = Convert(extension);
         stream.Position = 0;
@@ -149,14 +165,16 @@ public class Tests
 
             foreach (var id in ids)
             {
-                Assert.That(id, Does.StartWith("DeterministicId"),
-                    $"Entry '{entry.FullName}' has non-deterministic relationship Id '{id}'");
+                await Assert.That(id).StartsWith("DeterministicId").Because($"Entry '{entry.FullName}' has non-deterministic relationship Id '{id}'");
             }
         }
     }
 
     [Test]
-    public void ContentTypesAreSorted([Values] Extension extension)
+    [Arguments(Extension.xlsx)]
+    [Arguments(Extension.nupkg)]
+    [Arguments(Extension.docx)]
+    public async Task ContentTypesAreSorted(Extension extension)
     {
         var stream = Convert(extension);
         stream.Position = 0;
@@ -174,47 +192,46 @@ public class Tests
 
         for (var i = 0; i < elements.Count; i++)
         {
-            Assert.That(elements[i].ToString(), Is.EqualTo(sorted[i].ToString()),
-                $"[Content_Types].xml element at index {i} is not in sorted order");
+            await Assert.That(elements[i].ToString()).IsEqualTo(sorted[i].ToString()).Because($"[Content_Types].xml element at index {i} is not in sorted order");
         }
     }
 
     [Test]
-    public void ValidateDocx()
+    public async Task ValidateDocx()
     {
         var file = Path.Combine(directory, "sample.docx");
-        AssertNoNewValidationErrors(file, () => WordprocessingDocument.Open);
+        await AssertNoNewValidationErrors(file, () => WordprocessingDocument.Open);
     }
 
     [Test]
-    public void ValidateXlsx()
+    public async Task ValidateXlsx()
     {
         var file = Path.Combine(directory, "sample.xlsx");
-        AssertNoNewValidationErrors(file, () => SpreadsheetDocument.Open);
+        await AssertNoNewValidationErrors(file, () => SpreadsheetDocument.Open);
     }
 
     [Test]
-    public void ValidateNumberingDocx()
+    public async Task ValidateNumberingDocx()
     {
         var file = Path.Combine(directory, "samples.numbering1_1.docx");
-        AssertNoNewValidationErrors(file, () => WordprocessingDocument.Open);
+        await AssertNoNewValidationErrors(file, () => WordprocessingDocument.Open);
     }
 
     [Test]
-    public void ValidateAbsPathXlsx()
+    public async Task ValidateAbsPathXlsx()
     {
         var file = Path.Combine(directory, "sample.WithAbsPath.xlsx");
-        AssertNoNewValidationErrors(file, () => SpreadsheetDocument.Open);
+        await AssertNoNewValidationErrors(file, () => SpreadsheetDocument.Open);
     }
 
     [Test]
-    public void ValidateWithWorkbookRelsXlsx()
+    public async Task ValidateWithWorkbookRelsXlsx()
     {
         var file = Path.Combine(directory, "sample.WithWorkbookRels.xlsx");
-        AssertNoNewValidationErrors(file, () => SpreadsheetDocument.Open);
+        await AssertNoNewValidationErrors(file, () => SpreadsheetDocument.Open);
     }
 
-    static void AssertNoNewValidationErrors(string file, Func<Func<Stream, bool, OpenXmlPackage>> openFactory)
+    static async Task AssertNoNewValidationErrors(string file, Func<Func<Stream, bool, OpenXmlPackage>> openFactory)
     {
         var open = openFactory();
         var validator = new OpenXmlValidator();
@@ -234,18 +251,17 @@ public class Tests
             .Where(_ => !sourceErrors.Contains(_.Description))
             .ToList();
 
-        Assert.That(newErrors, Is.Empty,
-            "Conversion introduced new validation errors: " +
+        await Assert.That(newErrors).IsEmpty().Because("Conversion introduced new validation errors: " +
             string.Join(Environment.NewLine, newErrors.Select(_ => $"{_.Description} ({_.Path})")));
     }
 
     [Test]
-    public void NupkgSignatureIsRemoved()
+    public async Task NupkgSignatureIsRemoved()
     {
         var stream = Convert(Extension.nupkg);
         stream.Position = 0;
         using var archive = new Archive(stream, ZipArchiveMode.Read);
-        Assert.That(archive.GetEntry(".signature.p7s"), Is.Null);
+        await Assert.That(archive.GetEntry(".signature.p7s")).IsNull();
     }
 
     public enum Extension

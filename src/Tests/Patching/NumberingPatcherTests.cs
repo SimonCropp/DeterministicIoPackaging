@@ -1,6 +1,5 @@
 ﻿using System.Globalization;
 
-[TestFixture]
 public class NumberingPatcherTests
 {
     [Test]
@@ -42,7 +41,7 @@ public class NumberingPatcherTests
     // of "a" (so "ä" sorts first), while sv-SE sorts "ä" after "z". A culture
     // sort would thus swap the abstractNumId assignment between those cultures.
     [Test]
-    public void Patch_AbstractNumOrderIsCultureIndependent()
+    public async Task Patch_AbstractNumOrderIsCultureIndependent()
     {
         const string xml =
             """
@@ -72,19 +71,20 @@ public class NumberingPatcherTests
         var trTr = PatchUnderCulture(xml, CultureInfo.GetCultureInfo("tr-TR"));
         var invariant = PatchUnderCulture(xml, CultureInfo.InvariantCulture);
 
-        Assert.Multiple(() =>
+        using (Assert.Multiple())
+
         {
             // The whole patched document is byte-identical regardless of culture.
-            Assert.That(svSe, Is.EqualTo(enUs));
-            Assert.That(trTr, Is.EqualTo(enUs));
-            Assert.That(invariant, Is.EqualTo(enUs));
+            await Assert.That(svSe).IsEqualTo(enUs);
+            await Assert.That(trTr).IsEqualTo(enUs);
+            await Assert.That(invariant).IsEqualTo(enUs);
 
             // ...and the order is the Ordinal one: "z" before "ä", so the "z"
             // abstractNum is assigned id 0. The pre-fix culture sort would give
             // it id 1 under en-US.
-            Assert.That(AbstractNumIdFor(enUs, "z"), Is.EqualTo("0"));
-            Assert.That(AbstractNumIdFor(enUs, "ä"), Is.EqualTo("1"));
-        });
+            await Assert.That(AbstractNumIdFor(enUs, "z")).IsEqualTo("0");
+            await Assert.That(AbstractNumIdFor(enUs, "ä")).IsEqualTo("1");
+        }
     }
 
     static string PatchUnderCulture(string xml, CultureInfo culture)

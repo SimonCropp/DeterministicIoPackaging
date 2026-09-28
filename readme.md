@@ -64,7 +64,7 @@ See [Verify Naming docs](https://github.com/VerifyTests/Verify/blob/main/docs/na
 using var sourceStream = File.OpenRead(packagePath);
 var target = DeterministicPackage.Convert(sourceStream);
 ```
-<sup><a href='/src/Tests/Tests.cs#L268-L273' title='Snippet source file'>snippet source</a> | <a href='#snippet-Convert' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/Tests/Tests.cs#L284-L289' title='Snippet source file'>snippet source</a> | <a href='#snippet-Convert' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 
@@ -76,7 +76,7 @@ var target = DeterministicPackage.Convert(sourceStream);
 using var sourceStream = File.OpenRead(packagePath);
 var target = await DeterministicPackage.ConvertAsync(sourceStream);
 ```
-<sup><a href='/src/Tests/Tests.cs#L315-L320' title='Snippet source file'>snippet source</a> | <a href='#snippet-ConvertAsync' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/Tests/Tests.cs#L331-L336' title='Snippet source file'>snippet source</a> | <a href='#snippet-ConvertAsync' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 
@@ -94,7 +94,7 @@ foreach (var change in changes)
     Console.WriteLine($"{change.Kind} {change.Entry}");
 }
 ```
-<sup><a href='/src/Tests/Tests.cs#L280-L289' title='Snippet source file'>snippet source</a> | <a href='#snippet-ConvertChanges' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/Tests/Tests.cs#L296-L305' title='Snippet source file'>snippet source</a> | <a href='#snippet-ConvertChanges' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 The async form returns the report beside the stream, since an async method cannot have an `out` parameter:
@@ -109,7 +109,7 @@ foreach (var change in result.Changes)
     Console.WriteLine($"{change.Kind} {change.Entry}");
 }
 ```
-<sup><a href='/src/Tests/Tests.cs#L296-L305' title='Snippet source file'>snippet source</a> | <a href='#snippet-ConvertChangesAsync' title='Start of snippet'>anchor</a></sup>
+<sup><a href='/src/Tests/Tests.cs#L312-L321' title='Snippet source file'>snippet source</a> | <a href='#snippet-ConvertChangesAsync' title='Start of snippet'>anchor</a></sup>
 <!-- endSnippet -->
 
 Only differences are reported. The conversion restamps every timestamp, recompresses every entry and reserializes every XML part regardless, but those happen to every input alike and produce the same bytes on a second conversion — so reporting them would say nothing about why a given package was not already deterministic. An already deterministic package reports nothing at all.

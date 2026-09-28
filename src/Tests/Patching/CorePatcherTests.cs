@@ -1,5 +1,4 @@
-﻿[TestFixture]
-public class CorePatcherTests
+﻿public class CorePatcherTests
 {
     [Test]
     public Task Patch()

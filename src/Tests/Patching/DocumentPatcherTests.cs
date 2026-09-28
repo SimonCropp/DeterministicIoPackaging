@@ -1,5 +1,4 @@
-﻿[TestFixture]
-public class DocumentPatcherTests
+﻿public class DocumentPatcherTests
 {
     [Test]
     public Task Patch()

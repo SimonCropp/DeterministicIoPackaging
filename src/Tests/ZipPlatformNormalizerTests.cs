@@ -1,11 +1,10 @@
-[TestFixture]
 public class ZipPlatformNormalizerTests
 {
     // Simulates an archive produced on Unix (host byte 3, Unix mode bits in the
     // external attributes) and asserts the normalizer rewrites both to the
     // Windows/FAT-neutral values. This would fail before the normalizer existed.
     [Test]
-    public void RewritesUnixHostByteAndExternalAttributes()
+    public async Task RewritesUnixHostByteAndExternalAttributes()
     {
         var archive = BuildArchive();
         var buffer = archive.GetBuffer();
@@ -21,23 +20,23 @@ public class ZipPlatformNormalizerTests
 
         ZipPlatformNormalizer.Normalize(archive);
 
-        AssertNormalized(archive.ToArray());
+        await AssertNormalized(archive.ToArray());
     }
 
     // The end-to-end guarantee: whatever OS runs the conversion, the central
     // directory comes out OS-independent.
     [Test]
-    public void ConvertProducesOsIndependentCentralDirectory()
+    public async Task ConvertProducesOsIndependentCentralDirectory()
     {
         using var result = DeterministicPackage.Convert(BuildArchive());
 
-        AssertNormalized(result.ToArray());
+        await AssertNormalized(result.ToArray());
     }
 
     // The low byte of "version made by" encodes the spec version (a function of
     // the features used, not the OS) and must be left alone.
     [Test]
-    public void PreservesSpecVersionLowByte()
+    public async Task PreservesSpecVersionLowByte()
     {
         var archive = BuildArchive();
         var buffer = archive.GetBuffer();
@@ -53,23 +52,21 @@ public class ZipPlatformNormalizerTests
             .Select(_ => buffer[_ + 4])
             .ToList();
 
-        Assert.That(after, Is.EqualTo(before));
+        await Assert.That(after).IsEquivalentTo(before, CollectionOrdering.Matching);
     }
 
-    static void AssertNormalized(byte[] archive)
+    static async Task AssertNormalized(byte[] archive)
     {
         var records = CentralDirectoryRecords(archive, archive.Length);
 
-        Assert.That(records, Is.Not.Empty);
+        await Assert.That(records).IsNotEmpty();
         foreach (var record in records)
         {
-            Assert.Multiple(() =>
+            using (Assert.Multiple())
             {
-                Assert.That(archive[record + 5], Is.EqualTo(0),
-                    "host-OS byte must be normalized to 0");
-                Assert.That(BinaryPrimitives.ReadUInt32LittleEndian(archive.AsSpan(record + 38)), Is.EqualTo(0u),
-                    "external file attributes must be cleared");
-            });
+                await Assert.That(archive[record + 5]).IsEqualTo((byte) 0).Because("host-OS byte must be normalized to 0");
+                await Assert.That(BinaryPrimitives.ReadUInt32LittleEndian(archive.AsSpan(record + 38))).IsEqualTo(0u).Because("external file attributes must be cleared");
+            }
         }
     }
 
@@ -108,7 +105,10 @@ public class ZipPlatformNormalizerTests
             }
         }
 
-        Assert.That(eocd, Is.GreaterThanOrEqualTo(0), "EOCD record not found");
+        if (eocd < 0)
+        {
+            throw new("EOCD record not found");
+        }
 
         var count = BinaryPrimitives.ReadUInt16LittleEndian(buffer.AsSpan(eocd + 10));
         var offset = (int) BinaryPrimitives.ReadUInt32LittleEndian(buffer.AsSpan(eocd + 16));

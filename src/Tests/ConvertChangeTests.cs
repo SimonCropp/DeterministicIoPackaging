@@ -1,10 +1,9 @@
-[TestFixture]
 public class ConvertChangeTests
 {
     static string directory = ProjectFiles.ProjectDirectory;
 
     [Test]
-    public void ReportsTheRemovedNuGetParts()
+    public async Task ReportsTheRemovedNuGetParts()
     {
         var changes = Convert("sample.nupkg");
 
@@ -13,12 +12,12 @@ public class ConvertChangeTests
             .Select(_ => _.Entry)
             .ToList();
 
-        Assert.That(removed, Is.Not.Empty);
-        Assert.That(removed, Has.Some.Contains("psmdcp"));
+        await Assert.That(removed).IsNotEmpty();
+        await Assert.That(removed).Contains(_ => _!.Contains("psmdcp"));
     }
 
     [Test]
-    public void ReportsThePatchedRelationships()
+    public async Task ReportsThePatchedRelationships()
     {
         var changes = Convert("sample.docx");
 
@@ -27,11 +26,11 @@ public class ConvertChangeTests
             .Select(_ => _.Entry)
             .ToList();
 
-        Assert.That(patched, Is.Not.Empty);
+        await Assert.That(patched).IsNotEmpty();
     }
 
     [Test]
-    public void EveryChangeNamesAnEntryExceptReordering()
+    public async Task EveryChangeNamesAnEntryExceptReordering()
     {
         var changes = Convert("sample.docx");
 
@@ -39,11 +38,11 @@ public class ConvertChangeTests
         {
             if (change.Kind == ConvertChangeKind.Reordered)
             {
-                Assert.That(change.Entry, Is.Null);
+                await Assert.That(change.Entry).IsNull();
                 continue;
             }
 
-            Assert.That(change.Entry, Is.Not.Null.And.Not.Empty);
+            await Assert.That(change.Entry).IsNotNull().And.IsNotEmpty();
         }
     }
 
@@ -51,36 +50,36 @@ public class ConvertChangeTests
     // or the report could never answer "why is this package not deterministic?" — every part is
     // rewritten on every conversion, so "we touched it" would always be true of everything.
     [Test]
-    public void ReportsNothingOnASecondConversion()
+    public async Task ReportsNothingOnASecondConversion()
     {
         using var first = Convert("sample.docx", out _);
 
         first.Position = 0;
         using var second = DeterministicPackage.Convert(first, out var changes);
 
-        Assert.That(changes, Is.Empty);
+        await Assert.That(changes).IsEmpty();
     }
 
     [Test]
-    public void ReportsNothingOnASecondConversionOfANuGetPackage()
+    public async Task ReportsNothingOnASecondConversionOfANuGetPackage()
     {
         using var first = Convert("sample.nupkg", out _);
 
         first.Position = 0;
         using var second = DeterministicPackage.Convert(first, out var changes);
 
-        Assert.That(changes, Is.Empty);
+        await Assert.That(changes).IsEmpty();
     }
 
     [Test]
-    public void TheReportingOverloadProducesIdenticalBytes()
+    public async Task TheReportingOverloadProducesIdenticalBytes()
     {
         using var plainSource = File.OpenRead(Path.Combine(directory, "sample.docx"));
         using var plain = DeterministicPackage.Convert(plainSource);
 
         using var reported = Convert("sample.docx", out _);
 
-        Assert.That(reported.ToArray(), Is.EqualTo(plain.ToArray()));
+        await Assert.That(reported.ToArray()).IsEquivalentTo(plain.ToArray(), CollectionOrdering.Matching);
     }
 
     [Test]
@@ -91,9 +90,7 @@ public class ConvertChangeTests
         using var source = File.OpenRead(Path.Combine(directory, "sample.docx"));
         using var result = await DeterministicPackage.ConvertWithChangesAsync(source);
 
-        Assert.That(
-            result.Changes.Select(_ => $"{_.Kind} {_.Entry}"),
-            Is.EqualTo(expected.Select(_ => $"{_.Kind} {_.Entry}")));
+        await Assert.That(result.Changes.Select(_ => $"{_.Kind} {_.Entry}")).IsEquivalentTo(expected.Select(_ => $"{_.Kind} {_.Entry}"), CollectionOrdering.Matching);
     }
 
     [Test]
@@ -105,11 +102,11 @@ public class ConvertChangeTests
         using var source = File.OpenRead(Path.Combine(directory, "sample.docx"));
         using var result = await DeterministicPackage.ConvertWithChangesAsync(source);
 
-        Assert.That(result.Stream.ToArray(), Is.EqualTo(plain.ToArray()));
+        await Assert.That(result.Stream.ToArray()).IsEquivalentTo(plain.ToArray(), CollectionOrdering.Matching);
     }
 
     [Test]
-    public void ReportsReorderingWhenTheSourceIsNotSorted()
+    public async Task ReportsReorderingWhenTheSourceIsNotSorted()
     {
         using var unsorted = new MemoryStream();
         using (var archive = new ZipArchive(unsorted, ZipArchiveMode.Create, leaveOpen: true))
@@ -122,11 +119,11 @@ public class ConvertChangeTests
         unsorted.Position = 0;
         using var target = DeterministicPackage.Convert(unsorted, out var changes);
 
-        Assert.That(changes.Select(_ => _.Kind), Does.Contain(ConvertChangeKind.Reordered));
+        await Assert.That(changes.Select(_ => _.Kind)).Contains(ConvertChangeKind.Reordered);
     }
 
     [Test]
-    public void ReportsNoReorderingWhenTheSourceIsAlreadySorted()
+    public async Task ReportsNoReorderingWhenTheSourceIsAlreadySorted()
     {
         using var sorted = new MemoryStream();
         using (var archive = new ZipArchive(sorted, ZipArchiveMode.Create, leaveOpen: true))
@@ -138,7 +135,7 @@ public class ConvertChangeTests
         sorted.Position = 0;
         using var target = DeterministicPackage.Convert(sorted, out var changes);
 
-        Assert.That(changes.Select(_ => _.Kind), Does.Not.Contain(ConvertChangeKind.Reordered));
+        await Assert.That(changes.Select(_ => _.Kind)).DoesNotContain(ConvertChangeKind.Reordered);
     }
 
     static void Write(ZipArchive archive, string name, string content)

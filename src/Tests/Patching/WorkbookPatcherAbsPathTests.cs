@@ -1,4 +1,3 @@
-[TestFixture]
 public class WorkbookPatcherAbsPathTests
 {
     // The original WorkbookPatcher would walk Descendants(AlternateContent) and,

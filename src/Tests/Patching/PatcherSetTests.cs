@@ -1,8 +1,7 @@
-[TestFixture]
 public class PatcherSetTests
 {
     [Test]
-    public void FindResolvesExactMatchPatcherFromDictionary()
+    public async Task FindResolvesExactMatchPatcherFromDictionary()
     {
         var exact = new FakeExactPatcher("word/document.xml");
         var predicate = new FakePredicatePatcher(_ => false);
@@ -10,11 +9,11 @@ public class PatcherSetTests
 
         var entry = ZipEntryFor("word/document.xml");
 
-        Assert.That(set.Find(entry), Is.SameAs(exact));
+        await Assert.That(set.Find(entry)).IsSameReferenceAs(exact);
     }
 
     [Test]
-    public void FindFallsBackToPredicatePatchersWhenNoExactMatch()
+    public async Task FindFallsBackToPredicatePatchersWhenNoExactMatch()
     {
         var exact = new FakeExactPatcher("word/document.xml");
         var predicate = new FakePredicatePatcher(entry => entry.FullName.EndsWith(".rels"));
@@ -22,26 +21,26 @@ public class PatcherSetTests
 
         var entry = ZipEntryFor("word/_rels/footer1.xml.rels");
 
-        Assert.That(set.Find(entry), Is.SameAs(predicate));
+        await Assert.That(set.Find(entry)).IsSameReferenceAs(predicate);
     }
 
     [Test]
-    public void FindReturnsNullWhenNoPatcherMatches()
+    public async Task FindReturnsNullWhenNoPatcherMatches()
     {
         var set = new PatcherSet([new FakeExactPatcher("word/document.xml")]);
         var entry = ZipEntryFor("word/styles.xml");
 
-        Assert.That(set.Find(entry), Is.Null);
+        await Assert.That(set.Find(entry)).IsNull();
     }
 
     [Test]
-    public void ExactMatchesAreStoredOrdinal()
+    public async Task ExactMatchesAreStoredOrdinal()
     {
         var set = new PatcherSet([new FakeExactPatcher("Word/Document.xml")]);
 
         // Ordinal — different casing must not match.
-        Assert.That(set.Find(ZipEntryFor("word/document.xml")), Is.Null);
-        Assert.That(set.Find(ZipEntryFor("Word/Document.xml")), Is.Not.Null);
+        await Assert.That(set.Find(ZipEntryFor("word/document.xml"))).IsNull();
+        await Assert.That(set.Find(ZipEntryFor("Word/Document.xml"))).IsNotNull();
     }
 
     static Entry ZipEntryFor(string fullName)

@@ -1,4 +1,3 @@
-[TestFixture]
 public class WordRevisionMarkersTests
 {
     // Direct test of the helper. End-to-end coverage exists via
@@ -78,6 +77,6 @@ public class WordRevisionMarkersTests
     public void EmptyDocumentIsNoOp()
     {
         var document = new XDocument();
-        Assert.DoesNotThrow(() => WordRevisionMarkers.Strip(document));
+        WordRevisionMarkers.Strip(document);
     }
 }

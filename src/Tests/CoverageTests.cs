@@ -1,4 +1,3 @@
-[TestFixture]
 public class CoverageTests
 {
     // Gap 1: SheetPatcher collision-normalization.
@@ -6,7 +5,7 @@ public class CoverageTests
     // depends on the non-deterministic order the OpenXml SDK stored them. The
     // normalizer sorts by cell ref so the earliest cell gets the lowest ID.
     [Test]
-    public void SheetPatcher_InterchangeableIds_AssignedInCellRefOrder()
+    public async Task SheetPatcher_InterchangeableIds_AssignedInCellRefOrder()
     {
         const string sheetXml = """
             <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
@@ -45,13 +44,13 @@ public class CoverageTests
             .ToList();
 
         // B1 (earliest cell ref) must get DeterministicId1, B2 must get DeterministicId2.
-        Assert.Multiple(() =>
+        using (Assert.Multiple())
         {
-            Assert.That(hyperlinks[0].Attribute("ref")!.Value, Is.EqualTo("B1"));
-            Assert.That(hyperlinks[0].Attribute(r + "id")!.Value, Is.EqualTo("DeterministicId1"));
-            Assert.That(hyperlinks[1].Attribute("ref")!.Value, Is.EqualTo("B2"));
-            Assert.That(hyperlinks[1].Attribute(r + "id")!.Value, Is.EqualTo("DeterministicId2"));
-        });
+            await Assert.That(hyperlinks[0].Attribute("ref")!.Value).IsEqualTo("B1");
+            await Assert.That(hyperlinks[0].Attribute(r + "id")!.Value).IsEqualTo("DeterministicId1");
+            await Assert.That(hyperlinks[1].Attribute("ref")!.Value).IsEqualTo("B2");
+            await Assert.That(hyperlinks[1].Attribute(r + "id")!.Value).IsEqualTo("DeterministicId2");
+        }
     }
 
     // Gap 1b: stability check — vary the (rIdA, rIdB) naming and which cell ref
@@ -59,7 +58,7 @@ public class CoverageTests
     // DeterministicId mapping must always be the same: the earliest cell gets
     // the lowest id. This is the property the normalizer is supposed to guarantee.
     [Test]
-    public void SheetPatcher_InterchangeableIds_MappingIsInputOrderIndependent()
+    public async Task SheetPatcher_InterchangeableIds_MappingIsInputOrderIndependent()
     {
         static Dictionary<string, string> BuildAndConvert(string firstRef, string firstId, string secondRef, string secondId)
         {
@@ -107,20 +106,20 @@ public class CoverageTests
         };
 
         // Same semantic content, different element / rels / id orderings.
-        Assert.Multiple(() =>
+        using (Assert.Multiple())
         {
-            Assert.That(BuildAndConvert("B1", "rIdA", "B2", "rIdB"), Is.EquivalentTo(expected));
-            Assert.That(BuildAndConvert("B2", "rIdA", "B1", "rIdB"), Is.EquivalentTo(expected));
-            Assert.That(BuildAndConvert("B1", "zzzId", "B2", "aaaId"), Is.EquivalentTo(expected));
-            Assert.That(BuildAndConvert("B2", "zzzId", "B1", "aaaId"), Is.EquivalentTo(expected));
-        });
+            await Assert.That(BuildAndConvert("B1", "rIdA", "B2", "rIdB")).IsEquivalentTo(expected);
+            await Assert.That(BuildAndConvert("B2", "rIdA", "B1", "rIdB")).IsEquivalentTo(expected);
+            await Assert.That(BuildAndConvert("B1", "zzzId", "B2", "aaaId")).IsEquivalentTo(expected);
+            await Assert.That(BuildAndConvert("B2", "zzzId", "B1", "aaaId")).IsEquivalentTo(expected);
+        }
     }
 
     // Gap 2: Pptx patcher coverage for notesSlide, commentAuthors, handoutMaster.
     // The existing ConvertedPptx test uses only slide/master/layout/theme — none
     // of these additional content types exercise the patcher.
     [Test]
-    public void PptxPatcher_CoversNotesSlideCommentAuthorsHandoutMaster()
+    public async Task PptxPatcher_CoversNotesSlideCommentAuthorsHandoutMaster()
     {
         const string notesSlideXml = """
             <p:notes xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
@@ -180,20 +179,20 @@ public class CoverageTests
 
         var result = DeterministicPackage.Convert(zip);
 
-        AssertRelsIdsAreDeterministic(result, "ppt/notesSlides/_rels/notesSlide1.xml.rels");
-        AssertRelsIdsAreDeterministic(result, "ppt/_rels/commentAuthors.xml.rels");
-        AssertRelsIdsAreDeterministic(result, "ppt/handoutMasters/_rels/handoutMaster1.xml.rels");
+        await AssertRelsIdsAreDeterministic(result, "ppt/notesSlides/_rels/notesSlide1.xml.rels");
+        await AssertRelsIdsAreDeterministic(result, "ppt/_rels/commentAuthors.xml.rels");
+        await AssertRelsIdsAreDeterministic(result, "ppt/handoutMasters/_rels/handoutMaster1.xml.rels");
 
-        AssertContentRefsAreDeterministic(result, "ppt/notesSlides/notesSlide1.xml");
-        AssertContentRefsAreDeterministic(result, "ppt/commentAuthors.xml");
-        AssertContentRefsAreDeterministic(result, "ppt/handoutMasters/handoutMaster1.xml");
+        await AssertContentRefsAreDeterministic(result, "ppt/notesSlides/notesSlide1.xml");
+        await AssertContentRefsAreDeterministic(result, "ppt/commentAuthors.xml");
+        await AssertContentRefsAreDeterministic(result, "ppt/handoutMasters/handoutMaster1.xml");
     }
 
     // Gap 3: psmdcp skip in IsSkippedEntry.
     // Entries under package/services/metadata/core-properties/ with .psmdcp suffix
     // must be removed from the output.
     [Test]
-    public void PsmdcpEntry_IsRemoved()
+    public async Task PsmdcpEntry_IsRemoved()
     {
         var zip = BuildZip(new()
         {
@@ -206,18 +205,19 @@ public class CoverageTests
         result.Position = 0;
         using var archive = new Archive(result, ZipArchiveMode.Read);
 
-        Assert.Multiple(() =>
+        using (Assert.Multiple())
+
         {
-            Assert.That(archive.Entries.Any(_ => _.FullName.EndsWith(".psmdcp")), Is.False);
-            Assert.That(archive.GetEntry("some/other/entry.xml"), Is.Not.Null);
-        });
+            await Assert.That(archive.Entries.Any(_ => _.FullName.EndsWith(".psmdcp"))).IsFalse();
+            await Assert.That(archive.GetEntry("some/other/entry.xml")).IsNotNull();
+        }
     }
 
     // Gap 4: RelationshipRenumber.NormalizeTargets fallback — absolute target
     // that does NOT start with the base path must be left as-is (stripping the
     // leading / would break the reference).
     [Test]
-    public void NormalizeTargets_ExternalAbsoluteTarget_IsPreserved()
+    public async Task NormalizeTargets_ExternalAbsoluteTarget_IsPreserved()
     {
         // Base path derived from entry "word/_rels/document.xml.rels" is "/word/".
         // Target "/foreign/thing.xml" does not start with "/word/" → keep as-is.
@@ -241,19 +241,20 @@ public class CoverageTests
                 _ => _.Attribute("Type")!.Value,
                 _ => _.Attribute("Target")!.Value);
 
-        Assert.Multiple(() =>
+        using (Assert.Multiple())
+
         {
             // Matches base path → stripped to relative.
-            Assert.That(targets["http://example.com/type1"], Is.EqualTo("document.xml"));
+            await Assert.That(targets["http://example.com/type1"]).IsEqualTo("document.xml");
             // Does NOT match base path → preserved verbatim.
-            Assert.That(targets["http://example.com/type2"], Is.EqualTo("/foreign/thing.xml"));
-        });
+            await Assert.That(targets["http://example.com/type2"]).IsEqualTo("/foreign/thing.xml");
+        }
     }
 
     // Gap 5: IsSpreadsheetXml fallback — any xl/*.xml entry that doesn't hit a
     // dedicated patcher still runs through FixPrefixedDefaultNamespace.
     [Test]
-    public void IsSpreadsheetXml_UnpatchedXlEntry_HasPrefixedNamespaceFixed()
+    public async Task IsSpreadsheetXml_UnpatchedXlEntry_HasPrefixedNamespaceFixed()
     {
         // xl/sharedStrings.xml has no dedicated patcher, so it falls through
         // to the IsSpreadsheetXml branch. Author it with a prefixed default
@@ -273,37 +274,33 @@ public class CoverageTests
         var patched = ReadEntryXml(result, "xl/sharedStrings.xml");
 
         // Root element must use the default (unprefixed) namespace declaration.
-        Assert.Multiple(() =>
+        using (Assert.Multiple())
         {
-            Assert.That(patched.Root!.Name.LocalName, Is.EqualTo("sst"));
-            Assert.That(patched.Root.Name.NamespaceName,
-                Is.EqualTo("http://schemas.openxmlformats.org/spreadsheetml/2006/main"));
-            Assert.That(patched.Root.GetPrefixOfNamespace(patched.Root.Name.Namespace),
-                Is.Null.Or.Empty);
-        });
+            await Assert.That(patched.Root!.Name.LocalName).IsEqualTo("sst");
+            await Assert.That(patched.Root.Name.NamespaceName).IsEqualTo("http://schemas.openxmlformats.org/spreadsheetml/2006/main");
+            await Assert.That(patched.Root.GetPrefixOfNamespace(patched.Root.Name.Namespace)).IsNullOrEmpty();
+        }
     }
 
-    static void AssertRelsIdsAreDeterministic(Stream zip, string entryPath)
+    static async Task AssertRelsIdsAreDeterministic(Stream zip, string entryPath)
     {
         var xml = ReadEntryXml(zip, entryPath);
         var ids = xml.Root!.Elements().Select(_ => _.Attribute("Id")!.Value).ToList();
         foreach (var id in ids)
         {
-            Assert.That(id, Does.StartWith("DeterministicId"),
-                $"{entryPath} has non-deterministic Id '{id}'");
+            await Assert.That(id).StartsWith("DeterministicId").Because($"{entryPath} has non-deterministic Id '{id}'");
         }
     }
 
-    static void AssertContentRefsAreDeterministic(Stream zip, string entryPath)
+    static async Task AssertContentRefsAreDeterministic(Stream zip, string entryPath)
     {
         var xml = ReadEntryXml(zip, entryPath);
         XNamespace r = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
         var refs = xml.Descendants().Attributes(r + "id").Select(_ => _.Value).ToList();
-        Assert.That(refs, Is.Not.Empty, $"{entryPath} should contain at least one r:id reference");
+        await Assert.That(refs).IsNotEmpty().Because($"{entryPath} should contain at least one r:id reference");
         foreach (var refId in refs)
         {
-            Assert.That(refId, Does.StartWith("DeterministicId"),
-                $"{entryPath} has non-deterministic r:id '{refId}'");
+            await Assert.That(refId).StartsWith("DeterministicId").Because($"{entryPath} has non-deterministic r:id '{refId}'");
         }
     }
 

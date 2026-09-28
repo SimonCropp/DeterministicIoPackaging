@@ -12,3 +12,4 @@ src/Tests/~*
 /src/BenchmarkDotNet.Artifacts
 /src/Tests/TestResults
 *.lnk
+TestResults/

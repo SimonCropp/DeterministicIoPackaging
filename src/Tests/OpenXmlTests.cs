@@ -5,7 +5,6 @@ using DW = DocumentFormat.OpenXml.Drawing.Wordprocessing;
 using PIC = DocumentFormat.OpenXml.Drawing.Pictures;
 using P = DocumentFormat.OpenXml.Presentation;
 
-[TestFixture]
 public class OpenXmlTests
 {
     [Test]
@@ -18,7 +17,7 @@ public class OpenXmlTests
     }
 
     [Test]
-    public void SvgBlipEmbedIdsAreRemapped()
+    public async Task SvgBlipEmbedIdsAreRemapped()
     {
         var docxStream = CreateDocxWithSvg();
         var result = DeterministicPackage.Convert(docxStream);
@@ -46,8 +45,7 @@ public class OpenXmlTests
         // Every r:embed reference must exist in the .rels file
         foreach (var embedRef in embedRefs)
         {
-            Assert.That(relIds, Does.Contain(embedRef),
-                $"r:embed=\"{embedRef}\" in document.xml has no matching relationship ID in .rels");
+            await Assert.That(relIds).Contains(embedRef).Because($"r:embed=\"{embedRef}\" in document.xml has no matching relationship ID in .rels");
         }
     }
 
@@ -171,7 +169,7 @@ public class OpenXmlTests
     }
 
     [Test]
-    public void FooterHyperlinkIdsAreDeterministic()
+    public async Task FooterHyperlinkIdsAreDeterministic()
     {
         var docxStream = CreateDocxWithFooterHyperlink();
         var result = DeterministicPackage.Convert(docxStream);
@@ -191,14 +189,13 @@ public class OpenXmlTests
 
             foreach (var id in ids)
             {
-                Assert.That(id, Does.StartWith("DeterministicId"),
-                    $"Entry '{entry.FullName}' has non-deterministic relationship Id '{id}'");
+                await Assert.That(id).StartsWith("DeterministicId").Because($"Entry '{entry.FullName}' has non-deterministic relationship Id '{id}'");
             }
         }
     }
 
     [Test]
-    public void FooterHyperlinkBinaryEquality()
+    public async Task FooterHyperlinkBinaryEquality()
     {
         // Create two docx files with the same content but different random relationship IDs
         using var stream1 = DeterministicPackage.Convert(CreateDocxWithFooterHyperlink());
@@ -207,7 +204,7 @@ public class OpenXmlTests
         var bytes1 = stream1.ToArray();
         var bytes2 = stream2.ToArray();
 
-        Assert.That(bytes1, Is.EqualTo(bytes2));
+        await Assert.That(bytes1).IsEquivalentTo(bytes2, CollectionOrdering.Matching);
     }
 
     [Test]
@@ -230,7 +227,7 @@ public class OpenXmlTests
     }
 
     [Test]
-    public void HeaderRelIdsAreRemappedInContent()
+    public async Task HeaderRelIdsAreRemappedInContent()
     {
         var docxStream = CreateDocxWithHeaderHyperlink();
         var result = DeterministicPackage.Convert(docxStream);
@@ -241,7 +238,7 @@ public class OpenXmlTests
         // Get the relationship IDs from header .rels
         var headerRelsEntry = archive.Entries
             .FirstOrDefault(_ => _.FullName.StartsWith("word/_rels/header") && _.FullName.EndsWith(".rels"));
-        Assert.That(headerRelsEntry, Is.Not.Null, "Header .rels entry should exist");
+        await Assert.That(headerRelsEntry).IsNotNull().Because("Header .rels entry should exist");
 
         using var relsStream = headerRelsEntry!.Open();
         var relsXml = XDocument.Load(relsStream);
@@ -254,7 +251,7 @@ public class OpenXmlTests
             .FirstOrDefault(_ => _.FullName.StartsWith("word/header") &&
                                  _.FullName.EndsWith(".xml") &&
                                  !_.FullName.Contains("_rels"));
-        Assert.That(headerEntry, Is.Not.Null, "Header XML entry should exist");
+        await Assert.That(headerEntry).IsNotNull().Because("Header XML entry should exist");
 
         using var headerStream = headerEntry!.Open();
         var headerXml = XDocument.Load(headerStream);
@@ -268,8 +265,7 @@ public class OpenXmlTests
         // Every r:id in header content must match a .rels ID
         foreach (var rIdRef in rIdRefs)
         {
-            Assert.That(relIds, Does.Contain(rIdRef),
-                $"r:id=\"{rIdRef}\" in header XML has no matching relationship ID in header .rels");
+            await Assert.That(relIds).Contains(rIdRef).Because($"r:id=\"{rIdRef}\" in header XML has no matching relationship ID in header .rels");
         }
     }
 
@@ -417,7 +413,7 @@ public class OpenXmlTests
     }
 
     [Test]
-    public void ValidateConvertedSpreadsheet()
+    public async Task ValidateConvertedSpreadsheet()
     {
         var stream = CreateSpreadsheet();
         var result = DeterministicPackage.Convert(stream);
@@ -427,12 +423,11 @@ public class OpenXmlTests
         var validator = new OpenXmlValidator();
         var errors = validator.Validate(document).ToList();
 
-        Assert.That(errors, Is.Empty,
-            string.Join(Environment.NewLine, errors.Select(_ => $"{_.Description} ({_.Path})")));
+        await Assert.That(errors).IsEmpty().Because(string.Join(Environment.NewLine, errors.Select(_ => $"{_.Description} ({_.Path})")));
     }
 
     [Test]
-    public void ValidateConvertedDocxWithSvg()
+    public async Task ValidateConvertedDocxWithSvg()
     {
         var stream = CreateDocxWithSvg();
         var result = DeterministicPackage.Convert(stream);
@@ -442,12 +437,11 @@ public class OpenXmlTests
         var validator = new OpenXmlValidator();
         var errors = validator.Validate(document).ToList();
 
-        Assert.That(errors, Is.Empty,
-            string.Join(Environment.NewLine, errors.Select(_ => $"{_.Description} ({_.Path})")));
+        await Assert.That(errors).IsEmpty().Because(string.Join(Environment.NewLine, errors.Select(_ => $"{_.Description} ({_.Path})")));
     }
 
     [Test]
-    public void ValidateConvertedDocxWithFooterHyperlink()
+    public async Task ValidateConvertedDocxWithFooterHyperlink()
     {
         var stream = CreateDocxWithFooterHyperlink();
         var result = DeterministicPackage.Convert(stream);
@@ -457,12 +451,11 @@ public class OpenXmlTests
         var validator = new OpenXmlValidator();
         var errors = validator.Validate(document).ToList();
 
-        Assert.That(errors, Is.Empty,
-            string.Join(Environment.NewLine, errors.Select(_ => $"{_.Description} ({_.Path})")));
+        await Assert.That(errors).IsEmpty().Because(string.Join(Environment.NewLine, errors.Select(_ => $"{_.Description} ({_.Path})")));
     }
 
     [Test]
-    public void RevisionMarkersAreStripped()
+    public async Task RevisionMarkersAreStripped()
     {
         var docxStream = CreateDocxWithRevisionMarkers();
         var result = DeterministicPackage.Convert(docxStream);
@@ -496,14 +489,13 @@ public class OpenXmlTests
             foreach (var attrName in attributesToCheck)
             {
                 var found = xml.Descendants().Attributes(attrName).FirstOrDefault();
-                Assert.That(found, Is.Null,
-                    $"Entry '{entry.FullName}' still contains attribute '{attrName}'");
+                await Assert.That(found).IsNull().Because($"Entry '{entry.FullName}' still contains attribute '{attrName}'");
             }
         }
     }
 
     [Test]
-    public void RevisionMarkersBinaryEquality()
+    public async Task RevisionMarkersBinaryEquality()
     {
         // Two builds with different random rsids/paraIds must produce identical bytes
         using var stream1 = DeterministicPackage.Convert(CreateDocxWithRevisionMarkers());
@@ -512,7 +504,7 @@ public class OpenXmlTests
         var bytes1 = stream1.ToArray();
         var bytes2 = stream2.ToArray();
 
-        Assert.That(bytes1, Is.EqualTo(bytes2));
+        await Assert.That(bytes1).IsEquivalentTo(bytes2, CollectionOrdering.Matching);
     }
 
     static MemoryStream CreateDocxWithRevisionMarkers()
@@ -592,7 +584,7 @@ public class OpenXmlTests
         Random.Shared.Next().ToString("X8");
 
     [Test]
-    public void ValidateConvertedDocxWithHeaderHyperlink()
+    public async Task ValidateConvertedDocxWithHeaderHyperlink()
     {
         var stream = CreateDocxWithHeaderHyperlink();
         var result = DeterministicPackage.Convert(stream);
@@ -602,8 +594,7 @@ public class OpenXmlTests
         var validator = new OpenXmlValidator();
         var errors = validator.Validate(document).ToList();
 
-        Assert.That(errors, Is.Empty,
-            string.Join(Environment.NewLine, errors.Select(_ => $"{_.Description} ({_.Path})")));
+        await Assert.That(errors).IsEmpty().Because(string.Join(Environment.NewLine, errors.Select(_ => $"{_.Description} ({_.Path})")));
     }
 
     static Cell CreateCell(string reference, string value) =>
@@ -615,7 +606,7 @@ public class OpenXmlTests
         };
 
     [Test]
-    public void NestedZipIsRecursivelyNormalized()
+    public async Task NestedZipIsRecursivelyNormalized()
     {
         // Builds two outer packages that each contain a nested .zip entry whose
         // only difference is the inner entry's LastWriteTime — a known source of
@@ -631,7 +622,7 @@ public class OpenXmlTests
         using var converted1 = DeterministicPackage.Convert(outer1);
         using var converted2 = DeterministicPackage.Convert(outer2);
 
-        Assert.That(converted1.ToArray(), Is.EqualTo(converted2.ToArray()));
+        await Assert.That(converted1.ToArray()).IsEquivalentTo(converted2.ToArray(), CollectionOrdering.Matching);
     }
 
     [Test]
@@ -643,7 +634,7 @@ public class OpenXmlTests
         using var converted1 = await DeterministicPackage.ConvertAsync(outer1);
         using var converted2 = await DeterministicPackage.ConvertAsync(outer2);
 
-        Assert.That(converted1.ToArray(), Is.EqualTo(converted2.ToArray()));
+        await Assert.That(converted1.ToArray()).IsEquivalentTo(converted2.ToArray(), CollectionOrdering.Matching);
     }
 
     static MemoryStream BuildOuterWithNestedZip(DateTimeOffset nestedLastWrite)
@@ -695,7 +686,7 @@ public class OpenXmlTests
     }
 
     [Test]
-    public void PptxBinaryEquality()
+    public async Task PptxBinaryEquality()
     {
         using var stream1 = DeterministicPackage.Convert(CreatePresentation());
         using var stream2 = DeterministicPackage.Convert(CreatePresentation());
@@ -703,11 +694,11 @@ public class OpenXmlTests
         var bytes1 = stream1.ToArray();
         var bytes2 = stream2.ToArray();
 
-        Assert.That(bytes1, Is.EqualTo(bytes2));
+        await Assert.That(bytes1).IsEquivalentTo(bytes2, CollectionOrdering.Matching);
     }
 
     [Test]
-    public void ValidateConvertedPptx()
+    public async Task ValidateConvertedPptx()
     {
         var stream = CreatePresentation();
         var result = DeterministicPackage.Convert(stream);
@@ -717,8 +708,7 @@ public class OpenXmlTests
         var validator = new OpenXmlValidator();
         var errors = validator.Validate(document).ToList();
 
-        Assert.That(errors, Is.Empty,
-            string.Join(Environment.NewLine, errors.Select(_ => $"{_.Description} ({_.Path})")));
+        await Assert.That(errors).IsEmpty().Because(string.Join(Environment.NewLine, errors.Select(_ => $"{_.Description} ({_.Path})")));
     }
 
     static MemoryStream CreatePresentation()

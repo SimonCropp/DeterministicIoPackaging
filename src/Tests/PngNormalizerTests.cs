@@ -1,29 +1,28 @@
-[TestFixture]
 public class PngNormalizerTests
 {
     [Test]
-    public void OutputIsValidPng()
+    public async Task OutputIsValidPng()
     {
         var png = BuildPng(CompressionLevel.Fastest);
 
         var result = Normalize(png);
 
-        AssertValidPng(result);
+        await AssertValidPng(result);
     }
 
     [Test]
-    public void Deterministic()
+    public async Task Deterministic()
     {
         var png = BuildPng(CompressionLevel.Fastest);
 
         var result1 = Normalize(png);
         var result2 = Normalize(png);
 
-        Assert.That(result1, Is.EqualTo(result2));
+        await Assert.That(result1).IsEquivalentTo(result2, CollectionOrdering.Matching);
     }
 
     [Test]
-    public void DifferentCompressionLevelsProduceSameOutput()
+    public async Task DifferentCompressionLevelsProduceSameOutput()
     {
         var fastest = BuildPng(CompressionLevel.Fastest);
         var optimal = BuildPng(CompressionLevel.Optimal);
@@ -31,11 +30,11 @@ public class PngNormalizerTests
         var result1 = Normalize(fastest);
         var result2 = Normalize(optimal);
 
-        Assert.That(result1, Is.EqualTo(result2));
+        await Assert.That(result1).IsEquivalentTo(result2, CollectionOrdering.Matching);
     }
 
     [Test]
-    public void MultipleIdatChunksProduceSameOutputAsSingle()
+    public async Task MultipleIdatChunksProduceSameOutputAsSingle()
     {
         var singleIdat = BuildPng(CompressionLevel.Fastest);
         var multiIdat = BuildPngWithSplitIdat();
@@ -43,17 +42,17 @@ public class PngNormalizerTests
         var result1 = Normalize(singleIdat);
         var result2 = Normalize(multiIdat);
 
-        Assert.That(result1, Is.EqualTo(result2));
+        await Assert.That(result1).IsEquivalentTo(result2, CollectionOrdering.Matching);
     }
 
     [Test]
-    public void PreservesNonIdatChunks()
+    public async Task PreservesNonIdatChunks()
     {
         var png = BuildPngWithTextChunk("Test", "Value");
         var result = Normalize(png);
 
-        AssertValidPng(result);
-        Assert.That(FindChunk(result, "tEXt"), Is.Not.Null);
+        await AssertValidPng(result);
+        await Assert.That(FindChunk(result, "tEXt")).IsNotNull();
     }
 
     [Test]
@@ -68,11 +67,11 @@ public class PngNormalizerTests
         await PngNormalizer.NormalizeAsync(source, target, Cancel.None);
         var asyncResult = target.ToArray();
 
-        Assert.That(asyncResult, Is.EqualTo(syncResult));
+        await Assert.That(asyncResult).IsEquivalentTo(syncResult, CollectionOrdering.Matching);
     }
 
     [Test]
-    public void PackageConvertNormalizesPng()
+    public async Task PackageConvertNormalizesPng()
     {
         var png = BuildPng(CompressionLevel.Fastest);
 
@@ -99,7 +98,7 @@ public class PngNormalizerTests
         zipSource2.Position = 0;
         using var result2 = DeterministicPackage.Convert(zipSource2);
 
-        Assert.That(result1.ToArray(), Is.EqualTo(result2.ToArray()));
+        await Assert.That(result1.ToArray()).IsEquivalentTo(result2.ToArray(), CollectionOrdering.Matching);
     }
 
     static byte[] Normalize(byte[] png)
@@ -116,10 +115,10 @@ public class PngNormalizerTests
     static readonly byte[] iendType = "IEND"u8.ToArray();
     static readonly byte[] textType = "tEXt"u8.ToArray();
 
-    static void AssertValidPng(byte[] data)
+    static async Task AssertValidPng(byte[] data)
     {
-        Assert.That(data.Length, Is.GreaterThanOrEqualTo(8));
-        Assert.That(data.AsSpan(0, 8).ToArray(), Is.EqualTo(pngSignature));
+        await Assert.That(data.Length).IsGreaterThanOrEqualTo(8);
+        await Assert.That(data.AsSpan(0, 8).ToArray()).IsEquivalentTo(pngSignature, CollectionOrdering.Matching);
 
         var offset = 8;
         var foundIhdr = false;
@@ -134,7 +133,7 @@ public class PngNormalizerTests
 
             var expectedCrc = Crc32.HashToUInt32(data.AsSpan(offset + 4, 4 + length));
             var actualCrc = BinaryPrimitives.ReadUInt32BigEndian(data.AsSpan(offset + 8 + length));
-            Assert.That(actualCrc, Is.EqualTo(expectedCrc), $"CRC mismatch for chunk {type}");
+            await Assert.That(actualCrc).IsEqualTo(expectedCrc).Because($"CRC mismatch for chunk {type}");
 
             switch (type)
             {
@@ -152,9 +151,9 @@ public class PngNormalizerTests
             offset += totalSize;
         }
 
-        Assert.That(foundIhdr, Is.True, "Missing IHDR chunk");
-        Assert.That(foundIdat, Is.True, "Missing IDAT chunk");
-        Assert.That(foundIend, Is.True, "Missing IEND chunk");
+        await Assert.That(foundIhdr).IsTrue().Because("Missing IHDR chunk");
+        await Assert.That(foundIdat).IsTrue().Because("Missing IDAT chunk");
+        await Assert.That(foundIend).IsTrue().Because("Missing IEND chunk");
     }
 
     static byte[]? FindChunk(byte[] data, string chunkType)

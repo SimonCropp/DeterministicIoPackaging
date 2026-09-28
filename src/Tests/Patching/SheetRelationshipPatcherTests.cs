@@ -1,4 +1,3 @@
-[TestFixture]
 public class SheetRelationshipPatcherTests
 {
     [Test]

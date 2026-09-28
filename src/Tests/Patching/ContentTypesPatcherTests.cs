@@ -1,4 +1,3 @@
-[TestFixture]
 public class ContentTypesPatcherTests
 {
     const string variantDefaultIsWorkbook =
@@ -40,8 +39,8 @@ public class ContentTypesPatcherTests
 
     // The two equivalent producer splits must canonicalize to identical output.
     [Test]
-    public void SplitChoiceIsCanonicalized() =>
-        Assert.That(Patch(variantDefaultIsWorksheet), Is.EqualTo(Patch(variantDefaultIsWorkbook)));
+    public async Task SplitChoiceIsCanonicalized() =>
+        await Assert.That(Patch(variantDefaultIsWorksheet)).IsEqualTo(Patch(variantDefaultIsWorkbook));
 
     // The most-common content type for an extension becomes its Default; here two
     // worksheets vs one each of workbook/styles, so worksheet+xml wins the "xml"
@@ -54,7 +53,7 @@ public class ContentTypesPatcherTests
     // rewrite must be OPC-preserving, only relocating declarations between
     // Default and Override.
     [Test]
-    public void ContentTypesArePreserved()
+    public async Task ContentTypesArePreserved()
     {
         var patched = XDocument.Parse(Patch(variantDefaultIsWorkbook));
 
@@ -69,8 +68,7 @@ public class ContentTypesPatcherTests
 
         foreach (var (partName, contentType) in expected)
         {
-            Assert.That(Resolve(patched, partName), Is.EqualTo(contentType),
-                $"'{partName}' resolved to the wrong content type");
+            await Assert.That(Resolve(patched, partName)).IsEqualTo(contentType).Because($"'{partName}' resolved to the wrong content type");
         }
     }
 
