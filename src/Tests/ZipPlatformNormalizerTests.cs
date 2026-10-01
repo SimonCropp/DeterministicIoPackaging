@@ -4,7 +4,7 @@ public class ZipPlatformNormalizerTests
     // external attributes) and asserts the normalizer rewrites both to the
     // Windows/FAT-neutral values. This would fail before the normalizer existed.
     [Test]
-    public async Task RewritesUnixHostByteAndExternalAttributes()
+    public Task RewritesUnixHostByteAndExternalAttributes()
     {
         var archive = BuildArchive();
         var buffer = archive.GetBuffer();
@@ -20,7 +20,7 @@ public class ZipPlatformNormalizerTests
 
         ZipPlatformNormalizer.Normalize(archive);
 
-        await AssertNormalized(archive.ToArray());
+        return AssertNormalized(archive.ToArray());
     }
 
     // The end-to-end guarantee: whatever OS runs the conversion, the central

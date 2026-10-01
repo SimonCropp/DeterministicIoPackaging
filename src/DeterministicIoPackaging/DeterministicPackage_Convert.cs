@@ -7,7 +7,7 @@ public static partial class DeterministicPackage
     // (see ZipPlatformNormalizer) — all of which need the whole archive in a
     // seekable buffer. The result is therefore always a fresh MemoryStream, built
     // and patched in place with no extra copy.
-    public static MemoryStream Convert(Stream source) => Convert(source, (ChangeRecorder?) null);
+    public static MemoryStream Convert(Stream source) => Convert(source, null);
 
     /// <summary>
     /// Converts <paramref name="source"/> and reports what changed.
@@ -161,7 +161,7 @@ public static partial class DeterministicPackage
             buffer.Write(head, 0, read);
             source.CopyTo(buffer);
             buffer.Position = 0;
-            using var normalized = Convert(buffer, (ChangeRecorder?) null);
+            using var normalized = Convert(buffer, null);
             // Both halves are already resident, so the comparison is the cheap part here. The nested
             // package's own changes are not reported individually: the outer entry is the part of
             // this package that differs.

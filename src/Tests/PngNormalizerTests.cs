@@ -1,13 +1,13 @@
 public class PngNormalizerTests
 {
     [Test]
-    public async Task OutputIsValidPng()
+    public Task OutputIsValidPng()
     {
         var png = BuildPng(CompressionLevel.Fastest);
 
         var result = Normalize(png);
 
-        await AssertValidPng(result);
+        return AssertValidPng(result);
     }
 
     [Test]

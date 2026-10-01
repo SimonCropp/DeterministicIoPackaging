@@ -161,7 +161,7 @@ public class OpenXmlTests
                         {
                             Space = SpaceProcessingModeValues.Preserve
                         })));
-            mainPart.Document = new(body);
+            mainPart.Document = [with(body)];
         }
 
         stream.Position = 0;
@@ -305,7 +305,7 @@ public class OpenXmlTests
                         Type = W.HeaderFooterValues.Default,
                         Id = mainPart.GetIdOfPart(footerPart)
                     }));
-            mainPart.Document = new(body);
+            mainPart.Document = [with(body)];
         }
 
         stream.Position = 0;
@@ -348,7 +348,7 @@ public class OpenXmlTests
                         Type = W.HeaderFooterValues.Default,
                         Id = mainPart.GetIdOfPart(headerPart)
                     }));
-            mainPart.Document = new(body);
+            mainPart.Document = [with(body)];
         }
 
         stream.Position = 0;
@@ -361,10 +361,10 @@ public class OpenXmlTests
         using (var document = SpreadsheetDocument.Create(stream, SpreadsheetDocumentType.Workbook))
         {
             var workbookPart = document.AddWorkbookPart();
-            workbookPart.Workbook = new(new Sheets());
+            workbookPart.Workbook = [with(new Sheets())];
 
             var worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
-            worksheetPart.Worksheet = new(new SheetData());
+            worksheetPart.Worksheet = [with(new SheetData())];
 
             var sheets = workbookPart.Workbook.GetFirstChild<Sheets>()!;
             sheets.Append(new Sheet
@@ -375,19 +375,21 @@ public class OpenXmlTests
             });
 
             var stylesPart = workbookPart.AddNewPart<WorkbookStylesPart>();
-            stylesPart.Stylesheet = new(
-                new Fonts(new Font()),
-                new Fills(
-                    new Fill(new PatternFill
-                    {
-                        PatternType = PatternValues.None
-                    }),
-                    new Fill(new PatternFill
-                    {
-                        PatternType = PatternValues.Gray125
-                    })),
-                new Borders(new Border()),
-                new CellFormats(new CellFormat()));
+            stylesPart.Stylesheet =
+            [
+                with(new Fonts(new Font()),
+                    new Fills(
+                        new Fill(new PatternFill
+                        {
+                            PatternType = PatternValues.None
+                        }),
+                        new Fill(new PatternFill
+                        {
+                            PatternType = PatternValues.Gray125
+                        })),
+                    new Borders(new Border()),
+                    new CellFormats(new CellFormat()))
+            ];
 
             var sheetData = worksheetPart.Worksheet.GetFirstChild<SheetData>()!;
 
@@ -516,8 +518,9 @@ public class OpenXmlTests
 
             // Header with revision markers
             var headerPart = mainPart.AddNewPart<HeaderPart>();
-            headerPart.Header = new(
-                new W.Paragraph(
+            headerPart.Header =
+            [
+                with(new W.Paragraph(
                     new W.Run(
                         new W.Text("Header")
                         {
@@ -527,12 +530,14 @@ public class OpenXmlTests
                     ParagraphId = RandomHex8(),
                     TextId = RandomHex8(),
                     RsidParagraphAddition = RandomHex8()
-                });
+                })
+            ];
 
             // Footer with revision markers
             var footerPart = mainPart.AddNewPart<FooterPart>();
-            footerPart.Footer = new(
-                new W.Paragraph(
+            footerPart.Footer =
+            [
+                with(new W.Paragraph(
                     new W.Run(
                         new W.Text("Footer")
                         {
@@ -542,7 +547,8 @@ public class OpenXmlTests
                     ParagraphId = RandomHex8(),
                     TextId = RandomHex8(),
                     RsidParagraphAddition = RandomHex8()
-                });
+                })
+            ];
 
             // Body with revision markers on paragraph and section properties
             var body = new W.Body(
@@ -573,7 +579,7 @@ public class OpenXmlTests
                 {
                     RsidSect = RandomHex8()
                 });
-            mainPart.Document = new(body);
+            mainPart.Document = [with(body)];
         }
 
         stream.Position = 0;
@@ -602,7 +608,7 @@ public class OpenXmlTests
         {
             CellReference = reference,
             DataType = CellValues.InlineString,
-            InlineString = new(new Text(value))
+            InlineString = [with(new Text(value))]
         };
 
     [Test]
@@ -911,48 +917,50 @@ public class OpenXmlTests
                 Name = "Office Theme"
             };
 
-            slideMasterPart.SlideMaster = new(
-                new P.CommonSlideData(
-                    new P.Background(
-                        new P.BackgroundStyleReference(
-                            new A.SchemeColor
+            slideMasterPart.SlideMaster =
+            [
+                with(new P.CommonSlideData(
+                        new P.Background(
+                            new P.BackgroundStyleReference(
+                                new A.SchemeColor
+                                {
+                                    Val = A.SchemeColorValues.PhColor
+                                })
                             {
-                                Val = A.SchemeColorValues.PhColor
-                            })
-                        {
-                            Index = 1001
-                        }),
-                    new P.ShapeTree(
-                        new P.NonVisualGroupShapeProperties(
-                            new P.NonVisualDrawingProperties
-                            {
-                                Id = 1,
-                                Name = ""
-                            },
-                            new P.NonVisualGroupShapeDrawingProperties(),
-                            new P.ApplicationNonVisualDrawingProperties()),
-                        new P.GroupShapeProperties(new A.TransformGroup()))),
-                new P.ColorMap
-                {
-                    Background1 = A.ColorSchemeIndexValues.Light1,
-                    Text1 = A.ColorSchemeIndexValues.Dark1,
-                    Background2 = A.ColorSchemeIndexValues.Light2,
-                    Text2 = A.ColorSchemeIndexValues.Dark2,
-                    Accent1 = A.ColorSchemeIndexValues.Accent1,
-                    Accent2 = A.ColorSchemeIndexValues.Accent2,
-                    Accent3 = A.ColorSchemeIndexValues.Accent3,
-                    Accent4 = A.ColorSchemeIndexValues.Accent4,
-                    Accent5 = A.ColorSchemeIndexValues.Accent5,
-                    Accent6 = A.ColorSchemeIndexValues.Accent6,
-                    Hyperlink = A.ColorSchemeIndexValues.Hyperlink,
-                    FollowedHyperlink = A.ColorSchemeIndexValues.FollowedHyperlink
-                },
-                new P.SlideLayoutIdList(
-                    new P.SlideLayoutId
+                                Index = 1001
+                            }),
+                        new P.ShapeTree(
+                            new P.NonVisualGroupShapeProperties(
+                                new P.NonVisualDrawingProperties
+                                {
+                                    Id = 1,
+                                    Name = ""
+                                },
+                                new P.NonVisualGroupShapeDrawingProperties(),
+                                new P.ApplicationNonVisualDrawingProperties()),
+                            new P.GroupShapeProperties(new A.TransformGroup()))),
+                    new P.ColorMap
                     {
-                        Id = 2147483649U,
-                        RelationshipId = "slRid1"
-                    }));
+                        Background1 = A.ColorSchemeIndexValues.Light1,
+                        Text1 = A.ColorSchemeIndexValues.Dark1,
+                        Background2 = A.ColorSchemeIndexValues.Light2,
+                        Text2 = A.ColorSchemeIndexValues.Dark2,
+                        Accent1 = A.ColorSchemeIndexValues.Accent1,
+                        Accent2 = A.ColorSchemeIndexValues.Accent2,
+                        Accent3 = A.ColorSchemeIndexValues.Accent3,
+                        Accent4 = A.ColorSchemeIndexValues.Accent4,
+                        Accent5 = A.ColorSchemeIndexValues.Accent5,
+                        Accent6 = A.ColorSchemeIndexValues.Accent6,
+                        Hyperlink = A.ColorSchemeIndexValues.Hyperlink,
+                        FollowedHyperlink = A.ColorSchemeIndexValues.FollowedHyperlink
+                    },
+                    new P.SlideLayoutIdList(
+                        new P.SlideLayoutId
+                        {
+                            Id = 2147483649U,
+                            RelationshipId = "slRid1"
+                        }))
+            ];
 
             var slideLayoutPart = slideMasterPart.AddNewPart<SlideLayoutPart>("slRid1");
             slideLayoutPart.SlideLayout = new(
@@ -974,8 +982,9 @@ public class OpenXmlTests
 
             var slidePart = presentationPart.AddNewPart<SlidePart>("sldRid1");
             slidePart.AddPart(slideLayoutPart);
-            slidePart.Slide = new(
-                new P.CommonSlideData(
+            slidePart.Slide =
+            [
+                with(new P.CommonSlideData(
                     new P.ShapeTree(
                         new P.NonVisualGroupShapeProperties(
                             new P.NonVisualDrawingProperties
@@ -1013,31 +1022,34 @@ public class OpenXmlTests
                                         {
                                             Language = "en-US"
                                         },
-                                        new A.Text("Deterministic!"))))))));
+                                        new A.Text("Deterministic!"))))))))
+            ];
 
-            presentationPart.Presentation = new(
-                new P.SlideMasterIdList(
-                    new P.SlideMasterId
+            presentationPart.Presentation =
+            [
+                with(new P.SlideMasterIdList(
+                        new P.SlideMasterId
+                        {
+                            Id = 2147483648U,
+                            RelationshipId = "smRid1"
+                        }),
+                    new P.SlideIdList(
+                        new P.SlideId
+                        {
+                            Id = 256U,
+                            RelationshipId = "sldRid1"
+                        }),
+                    new P.SlideSize
                     {
-                        Id = 2147483648U,
-                        RelationshipId = "smRid1"
-                    }),
-                new P.SlideIdList(
-                    new P.SlideId
+                        Cx = 9144000,
+                        Cy = 6858000
+                    },
+                    new P.NotesSize
                     {
-                        Id = 256U,
-                        RelationshipId = "sldRid1"
-                    }),
-                new P.SlideSize
-                {
-                    Cx = 9144000,
-                    Cy = 6858000
-                },
-                new P.NotesSize
-                {
-                    Cx = 6858000,
-                    Cy = 9144000
-                });
+                        Cx = 6858000,
+                        Cy = 9144000
+                    })
+            ];
         }
 
         stream.Position = 0;

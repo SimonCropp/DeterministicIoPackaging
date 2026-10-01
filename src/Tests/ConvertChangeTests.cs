@@ -109,7 +109,7 @@ public class ConvertChangeTests
     public async Task ReportsReorderingWhenTheSourceIsNotSorted()
     {
         using var unsorted = new MemoryStream();
-        using (var archive = new ZipArchive(unsorted, ZipArchiveMode.Create, leaveOpen: true))
+        using (var archive = new Archive(unsorted, ZipArchiveMode.Create, leaveOpen: true))
         {
             // Written in reverse of the ordinal order the conversion writes them in.
             Write(archive, "b.txt", "b");
@@ -126,7 +126,7 @@ public class ConvertChangeTests
     public async Task ReportsNoReorderingWhenTheSourceIsAlreadySorted()
     {
         using var sorted = new MemoryStream();
-        using (var archive = new ZipArchive(sorted, ZipArchiveMode.Create, leaveOpen: true))
+        using (var archive = new Archive(sorted, ZipArchiveMode.Create, leaveOpen: true))
         {
             Write(archive, "a.txt", "a");
             Write(archive, "b.txt", "b");
@@ -138,7 +138,7 @@ public class ConvertChangeTests
         await Assert.That(changes.Select(_ => _.Kind)).DoesNotContain(ConvertChangeKind.Reordered);
     }
 
-    static void Write(ZipArchive archive, string name, string content)
+    static void Write(Archive archive, string name, string content)
     {
         using var stream = archive.CreateEntry(name).Open();
         using var writer = new StreamWriter(stream);

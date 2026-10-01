@@ -132,12 +132,7 @@ class ContentTypesPatcher(IReadOnlyCollection<string> partNames) :
             return overridden;
         }
 
-        if (defaults.TryGetValue(extension, out var byDefault))
-        {
-            return byDefault;
-        }
-
-        return null;
+        return defaults.GetValueOrDefault(extension);
     }
 
     static Dictionary<string, string> ReadDefaults(XElement root)

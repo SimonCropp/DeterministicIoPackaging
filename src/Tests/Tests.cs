@@ -197,38 +197,38 @@ public class Tests
     }
 
     [Test]
-    public async Task ValidateDocx()
+    public Task ValidateDocx()
     {
         var file = Path.Combine(directory, "sample.docx");
-        await AssertNoNewValidationErrors(file, () => WordprocessingDocument.Open);
+        return AssertNoNewValidationErrors(file, () => WordprocessingDocument.Open);
     }
 
     [Test]
-    public async Task ValidateXlsx()
+    public Task ValidateXlsx()
     {
         var file = Path.Combine(directory, "sample.xlsx");
-        await AssertNoNewValidationErrors(file, () => SpreadsheetDocument.Open);
+        return AssertNoNewValidationErrors(file, () => SpreadsheetDocument.Open);
     }
 
     [Test]
-    public async Task ValidateNumberingDocx()
+    public Task ValidateNumberingDocx()
     {
         var file = Path.Combine(directory, "samples.numbering1_1.docx");
-        await AssertNoNewValidationErrors(file, () => WordprocessingDocument.Open);
+        return AssertNoNewValidationErrors(file, () => WordprocessingDocument.Open);
     }
 
     [Test]
-    public async Task ValidateAbsPathXlsx()
+    public Task ValidateAbsPathXlsx()
     {
         var file = Path.Combine(directory, "sample.WithAbsPath.xlsx");
-        await AssertNoNewValidationErrors(file, () => SpreadsheetDocument.Open);
+        return AssertNoNewValidationErrors(file, () => SpreadsheetDocument.Open);
     }
 
     [Test]
-    public async Task ValidateWithWorkbookRelsXlsx()
+    public Task ValidateWithWorkbookRelsXlsx()
     {
         var file = Path.Combine(directory, "sample.WithWorkbookRels.xlsx");
-        await AssertNoNewValidationErrors(file, () => SpreadsheetDocument.Open);
+        return AssertNoNewValidationErrors(file, () => SpreadsheetDocument.Open);
     }
 
     static async Task AssertNoNewValidationErrors(string file, Func<Func<Stream, bool, OpenXmlPackage>> openFactory)
