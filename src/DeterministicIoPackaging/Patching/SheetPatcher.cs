@@ -9,6 +9,7 @@ class SheetPatcher(SheetRelationshipPatcher relsPatcher) : IPatcher
     {
         DeterministicPackage.FixPrefixedDefaultNamespace(xml);
         xml.Root!.Attribute(xName)?.Remove();
+        ProtectionHashes.Scrub(xml);
 
         // xl/worksheets/sheet1.xml → sheet1.xml
         var sheetName = entryName.Replace("xl/worksheets/", "");
