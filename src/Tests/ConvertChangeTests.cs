@@ -75,6 +75,7 @@ public class ConvertChangeTests
     public async Task TheReportingOverloadProducesIdenticalBytes()
     {
         using var plainSource = File.OpenRead(Path.Combine(directory, "sample.docx"));
+        // ReSharper disable once MethodHasAsyncOverload
         using var plain = DeterministicPackage.Convert(plainSource);
 
         using var reported = Convert("sample.docx", out _);
