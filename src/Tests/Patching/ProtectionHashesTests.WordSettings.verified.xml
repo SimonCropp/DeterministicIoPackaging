@@ -1,0 +1,4 @@
+﻿<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:writeProtection w:cryptProviderType="rsaAES" w:cryptAlgorithmSid="14" w:cryptSpinCount="100000" w:hash="AAAAAA==" w:salt="AAAAAA==" />
+  <w:documentProtection w:edit="readOnly" w:enforcement="1" w:algorithmName="SHA-512" w:hashValue="AAAAAA==" w:saltValue="AAAAAA==" w:spinCount="100000" />
+</w:settings>

@@ -32,6 +32,8 @@ Example file formats that leverage System.IO.Packaging
    * Remove the `Relationship` for the `.psmdcp` entry
  * For the relationships entry `docProps/core.xml`
    * Remove the `creator`, `created`, `lastModifiedBy`, and `modified` elements
+ * For password protection in worksheets (`sheetProtection`, `protectedRange`), the workbook (`workbookProtection`, `fileSharing`), and Word parts such as `word/settings.xml` (`documentProtection`, `writeProtection`)
+   * Replace the salt and hash (`saltValue`/`hashValue`, `salt`/`hash`, and the `workbook*`/`revisions*` variants) with zero bytes of the same length. The salt is random, so it differs every time a protected document is produced. The original password no longer unlocks the converted document.
 
 
 ### Spreadsheet namespace validation

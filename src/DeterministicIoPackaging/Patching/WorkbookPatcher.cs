@@ -10,6 +10,7 @@ class WorkbookPatcher(WorkbookRelationshipPatcher relsPatcher) : IExactMatchPatc
     public void PatchXml(XDocument xml, string entryName)
     {
         DeterministicPackage.FixPrefixedDefaultNamespace(xml);
+        ProtectionHashes.Scrub(xml);
 
         // Find the absPath directly and walk up to the AlternateContent
         // ancestor. The previous shape did Descendants(alternateContent)
