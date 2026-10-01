@@ -1,5 +1,5 @@
 // Patches Word sub-part XML files (headers, footers, etc.) to strip
-// per-save revision markers and remap relationship IDs that were
+// per-save revision markers and protection salts/hashes (word/settings.xml), and remap relationship IDs that were
 // renumbered by WordPartRelationshipPatcher.
 //
 // Matches files like word/footer1.xml, word/header1.xml — any XML file
@@ -20,6 +20,7 @@ class WordPartPatcher(WordPartRelationshipPatcher relsPatcher) : IPatcher
     public void PatchXml(XDocument xml, string entryName)
     {
         WordRevisionMarkers.Strip(xml);
+        ProtectionHashes.Scrub(xml);
 
         if (relsPatcher.IdMappings.TryGetValue(entryName, out var mapping) && mapping.Count > 0)
         {

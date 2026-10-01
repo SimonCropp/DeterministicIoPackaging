@@ -1,0 +1,7 @@
+﻿<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <sheetData />
+  <sheetProtection algorithmName="SHA-512" hashValue="AAAAAA==" saltValue="AAAAAAAAAAAAAAAAAAAAAA==" spinCount="100000" sheet="1" />
+  <protectedRanges>
+    <protectedRange name="Range1" sqref="A1:B2" algorithmName="SHA-512" hashValue="AAAAAA==" saltValue="AAAAAA==" spinCount="100000" />
+  </protectedRanges>
+</worksheet>

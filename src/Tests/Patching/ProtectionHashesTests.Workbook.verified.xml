@@ -1,0 +1,4 @@
+﻿<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <fileSharing userName="user" algorithmName="SHA-512" hashValue="AAAAAA==" saltValue="AAAAAA==" spinCount="100000" />
+  <workbookProtection workbookAlgorithmName="SHA-512" workbookHashValue="AAAAAA==" workbookSaltValue="AAAAAA==" workbookSpinCount="100000" revisionsAlgorithmName="SHA-512" revisionsHashValue="AAAAAA==" revisionsSaltValue="AAAAAA==" revisionsSpinCount="100000" lockStructure="1" />
+</workbook>
