@@ -21,7 +21,8 @@ public class CoverageTests
             </worksheet>
             """;
 
-        const string sheetRels = """
+        const string sheetRels =
+            """
             <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
               <Relationship Id="rIdFirst" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.com/" TargetMode="External" />
               <Relationship Id="rIdSecond" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.com/" TargetMode="External" />
@@ -34,7 +35,7 @@ public class CoverageTests
             ["xl/worksheets/_rels/sheet1.xml.rels"] = sheetRels
         });
 
-        var result = DeterministicPackage.Convert(zip);
+        var result = await DeterministicPackage.ConvertAsync(zip);
         var sheet = ReadEntryXml(result, "xl/worksheets/sheet1.xml");
 
         XNamespace r = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
@@ -62,7 +63,8 @@ public class CoverageTests
     {
         static Dictionary<string, string> BuildAndConvert(string firstRef, string firstId, string secondRef, string secondId)
         {
-            var sheetXml = $"""
+            var sheetXml =
+                $"""
                 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
                            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
                   <sheetData>
@@ -76,7 +78,8 @@ public class CoverageTests
                 </worksheet>
                 """;
 
-            var sheetRels = $"""
+            var sheetRels =
+                $"""
                 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
                   <Relationship Id="{firstId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.com/" TargetMode="External" />
                   <Relationship Id="{secondId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.com/" TargetMode="External" />
@@ -121,7 +124,8 @@ public class CoverageTests
     [Test]
     public async Task PptxPatcher_CoversNotesSlideCommentAuthorsHandoutMaster()
     {
-        const string notesSlideXml = """
+        const string notesSlideXml =
+            """
             <p:notes xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
                      xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
               <p:cSld><p:spTree /></p:cSld>
@@ -129,13 +133,15 @@ public class CoverageTests
             </p:notes>
             """;
 
-        const string notesSlideRels = """
+        const string notesSlideRels =
+            """
             <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
               <Relationship Id="rand-notes-ref-1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesMaster" Target="../notesMasters/notesMaster1.xml" />
             </Relationships>
             """;
 
-        const string commentAuthorsXml = """
+        const string commentAuthorsXml =
+            """
             <p:cmAuthorLst xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
                            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
               <p:cmAuthor id="0" name="Author" initials="A">
@@ -146,13 +152,15 @@ public class CoverageTests
             </p:cmAuthorLst>
             """;
 
-        const string commentAuthorsRels = """
+        const string commentAuthorsRels =
+            """
             <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
               <Relationship Id="rand-cm-1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/avatar.png" />
             </Relationships>
             """;
 
-        const string handoutMasterXml = """
+        const string handoutMasterXml =
+            """
             <p:handoutMaster xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
                              xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
               <p:cSld><p:spTree /></p:cSld>
@@ -161,7 +169,8 @@ public class CoverageTests
             </p:handoutMaster>
             """;
 
-        const string handoutMasterRels = """
+        const string handoutMasterRels =
+            """
             <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
               <Relationship Id="rand-ho-1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="../theme/theme2.xml" />
             </Relationships>
@@ -177,7 +186,7 @@ public class CoverageTests
             ["ppt/handoutMasters/_rels/handoutMaster1.xml.rels"] = handoutMasterRels
         });
 
-        var result = DeterministicPackage.Convert(zip);
+        var result = await DeterministicPackage.ConvertAsync(zip);
 
         await AssertRelsIdsAreDeterministic(result, "ppt/notesSlides/_rels/notesSlide1.xml.rels");
         await AssertRelsIdsAreDeterministic(result, "ppt/_rels/commentAuthors.xml.rels");
@@ -198,7 +207,8 @@ public class CoverageTests
         {
             var fields = string.Concat(
                 fieldIds.Select(_ => $"""<a:fld id="{_}" type="slidenum"><a:t>1</a:t></a:fld>"""));
-            return $"""
+            return
+                $"""
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
                        xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
                        xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
@@ -207,7 +217,8 @@ public class CoverageTests
                 """;
         }
 
-        const string slideRels = """
+        const string slideRels =
+            """
             <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
               <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml" />
             </Relationships>
@@ -222,7 +233,7 @@ public class CoverageTests
                 .ToList();
         }
 
-        MemoryStream Build() =>
+        static MemoryStream Build() =>
             BuildZip(new()
             {
                 ["ppt/slides/slide1.xml"] = Slide(
@@ -236,8 +247,8 @@ public class CoverageTests
                 ["ppt/slides/_rels/slide2.xml.rels"] = slideRels
             });
 
-        var first = DeterministicPackage.Convert(Build());
-        var second = DeterministicPackage.Convert(Build());
+        var first = await DeterministicPackage.ConvertAsync(Build());
+        var second = await DeterministicPackage.ConvertAsync(Build());
 
         const string one = "{00000001-0000-0000-0000-000000000000}";
         const string two = "{00000002-0000-0000-0000-000000000000}";
@@ -253,7 +264,8 @@ public class CoverageTests
     [Test]
     public async Task CorePatcher_RemovesLastPrinted()
     {
-        const string core = """
+        const string core =
+            """
             <cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties"
                                xmlns:dc="http://purl.org/dc/elements/1.1/"
                                xmlns:dcterms="http://purl.org/dc/terms/"
@@ -269,7 +281,7 @@ public class CoverageTests
             ["docProps/core.xml"] = core
         });
 
-        var result = DeterministicPackage.Convert(zip);
+        var result = await DeterministicPackage.ConvertAsync(zip);
         var names = ReadEntryXml(result, "docProps/core.xml")
             .Root!
             .Elements()
@@ -292,7 +304,7 @@ public class CoverageTests
             ["some/other/entry.xml"] = "<root />"
         });
 
-        var result = DeterministicPackage.Convert(zip);
+        var result = await DeterministicPackage.ConvertAsync(zip);
         result.Position = 0;
         using var archive = new Archive(result, ZipArchiveMode.Read);
 
@@ -312,7 +324,8 @@ public class CoverageTests
     {
         // Base path derived from entry "word/_rels/document.xml.rels" is "/word/".
         // Target "/foreign/thing.xml" does not start with "/word/" → keep as-is.
-        const string rels = """
+        const string rels =
+            """
             <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
               <Relationship Id="r1" Type="http://example.com/type1" Target="/word/document.xml" />
               <Relationship Id="r2" Type="http://example.com/type2" Target="/foreign/thing.xml" />
@@ -324,7 +337,7 @@ public class CoverageTests
             ["word/_rels/document.xml.rels"] = rels
         });
 
-        var result = DeterministicPackage.Convert(zip);
+        var result = await DeterministicPackage.ConvertAsync(zip);
         var patched = ReadEntryXml(result, "word/_rels/document.xml.rels");
 
         var targets = patched.Root!.Elements()
@@ -350,7 +363,8 @@ public class CoverageTests
         // xl/sharedStrings.xml has no dedicated patcher, so it falls through
         // to the IsSpreadsheetXml branch. Author it with a prefixed default
         // namespace and assert the prefix is stripped.
-        const string sharedStrings = """
+        const string sharedStrings =
+            """
             <x:sst xmlns:x="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="1" uniqueCount="1">
               <x:si><x:t>Hello</x:t></x:si>
             </x:sst>
@@ -361,7 +375,7 @@ public class CoverageTests
             ["xl/sharedStrings.xml"] = sharedStrings
         });
 
-        var result = DeterministicPackage.Convert(zip);
+        var result = await DeterministicPackage.ConvertAsync(zip);
         var patched = ReadEntryXml(result, "xl/sharedStrings.xml");
 
         // Root element must use the default (unprefixed) namespace declaration.

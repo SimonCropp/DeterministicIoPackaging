@@ -20,14 +20,14 @@ public class OpenXmlTests
     public async Task SvgBlipEmbedIdsAreRemapped()
     {
         var docxStream = CreateDocxWithSvg();
-        var result = DeterministicPackage.Convert(docxStream);
+        var result = await DeterministicPackage.ConvertAsync(docxStream);
 
         result.Position = 0;
         using var archive = new Archive(result, ZipArchiveMode.Read);
 
         // Collect relationship IDs from .rels
         var relsEntry = archive.GetEntry("word/_rels/document.xml.rels")!;
-        using var relsStream = relsEntry.Open();
+        using var relsStream = await relsEntry.OpenAsync();
         var relsXml = XDocument.Load(relsStream);
         var relIds = relsXml.Root!.Elements()
             .Select(_ => _.Attribute("Id")!.Value)
@@ -35,7 +35,7 @@ public class OpenXmlTests
 
         // Collect r:embed references from document.xml
         var docEntry = archive.GetEntry("word/document.xml")!;
-        using var docStream = docEntry.Open();
+        using var docStream = await docEntry.OpenAsync();
         var docXml = XDocument.Load(docStream);
         XNamespace r = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
         var embedRefs = docXml.Descendants().Attributes(r + "embed")
@@ -172,7 +172,7 @@ public class OpenXmlTests
     public async Task FooterHyperlinkIdsAreDeterministic()
     {
         var docxStream = CreateDocxWithFooterHyperlink();
-        var result = DeterministicPackage.Convert(docxStream);
+        var result = await DeterministicPackage.ConvertAsync(docxStream);
 
         result.Position = 0;
         using var archive = new Archive(result, ZipArchiveMode.Read);
@@ -180,7 +180,7 @@ public class OpenXmlTests
         // Check all .rels files have deterministic IDs
         foreach (var entry in archive.Entries.Where(_ => _.FullName.EndsWith(".rels")))
         {
-            using var entryStream = entry.Open();
+            using var entryStream = await entry.OpenAsync();
             var xml = XDocument.Load(entryStream);
             var ids = xml.Root!.Elements()
                 .Select(_ => _.Attribute("Id")?.Value)
@@ -198,8 +198,8 @@ public class OpenXmlTests
     public async Task FooterHyperlinkBinaryEquality()
     {
         // Create two docx files with the same content but different random relationship IDs
-        using var stream1 = DeterministicPackage.Convert(CreateDocxWithFooterHyperlink());
-        using var stream2 = DeterministicPackage.Convert(CreateDocxWithFooterHyperlink());
+        using var stream1 = await DeterministicPackage.ConvertAsync(CreateDocxWithFooterHyperlink());
+        using var stream2 = await DeterministicPackage.ConvertAsync(CreateDocxWithFooterHyperlink());
 
         var bytes1 = stream1.ToArray();
         var bytes2 = stream2.ToArray();
@@ -230,7 +230,7 @@ public class OpenXmlTests
     public async Task HeaderRelIdsAreRemappedInContent()
     {
         var docxStream = CreateDocxWithHeaderHyperlink();
-        var result = DeterministicPackage.Convert(docxStream);
+        var result = await DeterministicPackage.ConvertAsync(docxStream);
 
         result.Position = 0;
         using var archive = new Archive(result, ZipArchiveMode.Read);
@@ -240,7 +240,7 @@ public class OpenXmlTests
             .FirstOrDefault(_ => _.FullName.StartsWith("word/_rels/header") && _.FullName.EndsWith(".rels"));
         await Assert.That(headerRelsEntry).IsNotNull().Because("Header .rels entry should exist");
 
-        using var relsStream = headerRelsEntry!.Open();
+        using var relsStream = await headerRelsEntry!.OpenAsync();
         var relsXml = XDocument.Load(relsStream);
         var relIds = relsXml.Root!.Elements()
             .Select(_ => _.Attribute("Id")!.Value)
@@ -253,7 +253,7 @@ public class OpenXmlTests
                                  !_.FullName.Contains("_rels"));
         await Assert.That(headerEntry).IsNotNull().Because("Header XML entry should exist");
 
-        using var headerStream = headerEntry!.Open();
+        using var headerStream = await headerEntry!.OpenAsync();
         var headerXml = XDocument.Load(headerStream);
         XNamespace r = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
         var rIdRefs = headerXml
@@ -418,7 +418,7 @@ public class OpenXmlTests
     public async Task ValidateConvertedSpreadsheet()
     {
         var stream = CreateSpreadsheet();
-        var result = DeterministicPackage.Convert(stream);
+        var result = await DeterministicPackage.ConvertAsync(stream);
         result.Position = 0;
 
         using var document = SpreadsheetDocument.Open(result, false);
@@ -432,7 +432,7 @@ public class OpenXmlTests
     public async Task ValidateConvertedDocxWithSvg()
     {
         var stream = CreateDocxWithSvg();
-        var result = DeterministicPackage.Convert(stream);
+        var result = await DeterministicPackage.ConvertAsync(stream);
         result.Position = 0;
 
         using var document = WordprocessingDocument.Open(result, false);
@@ -446,7 +446,7 @@ public class OpenXmlTests
     public async Task ValidateConvertedDocxWithFooterHyperlink()
     {
         var stream = CreateDocxWithFooterHyperlink();
-        var result = DeterministicPackage.Convert(stream);
+        var result = await DeterministicPackage.ConvertAsync(stream);
         result.Position = 0;
 
         using var document = WordprocessingDocument.Open(result, false);
@@ -460,7 +460,7 @@ public class OpenXmlTests
     public async Task RevisionMarkersAreStripped()
     {
         var docxStream = CreateDocxWithRevisionMarkers();
-        var result = DeterministicPackage.Convert(docxStream);
+        var result = await DeterministicPackage.ConvertAsync(docxStream);
 
         result.Position = 0;
         using var archive = new Archive(result, ZipArchiveMode.Read);
@@ -486,7 +486,7 @@ public class OpenXmlTests
                          _.FullName.EndsWith(".xml") &&
                          !_.FullName.Contains("/_rels/")))
         {
-            using var stream = entry.Open();
+            using var stream = await entry.OpenAsync();
             var xml = XDocument.Load(stream);
             foreach (var attrName in attributesToCheck)
             {
@@ -500,8 +500,8 @@ public class OpenXmlTests
     public async Task RevisionMarkersBinaryEquality()
     {
         // Two builds with different random rsids/paraIds must produce identical bytes
-        using var stream1 = DeterministicPackage.Convert(CreateDocxWithRevisionMarkers());
-        using var stream2 = DeterministicPackage.Convert(CreateDocxWithRevisionMarkers());
+        using var stream1 = await DeterministicPackage.ConvertAsync(CreateDocxWithRevisionMarkers());
+        using var stream2 = await DeterministicPackage.ConvertAsync(CreateDocxWithRevisionMarkers());
 
         var bytes1 = stream1.ToArray();
         var bytes2 = stream2.ToArray();
@@ -593,7 +593,7 @@ public class OpenXmlTests
     public async Task ValidateConvertedDocxWithHeaderHyperlink()
     {
         var stream = CreateDocxWithHeaderHyperlink();
-        var result = DeterministicPackage.Convert(stream);
+        var result = await DeterministicPackage.ConvertAsync(stream);
         result.Position = 0;
 
         using var document = WordprocessingDocument.Open(result, false);
@@ -625,8 +625,8 @@ public class OpenXmlTests
         var outer1 = BuildOuterWithNestedZip(new(2020, 1, 1, 0, 0, 0, TimeSpan.Zero));
         var outer2 = BuildOuterWithNestedZip(new(2024, 6, 15, 12, 30, 0, TimeSpan.Zero));
 
-        using var converted1 = DeterministicPackage.Convert(outer1);
-        using var converted2 = DeterministicPackage.Convert(outer2);
+        using var converted1 = await DeterministicPackage.ConvertAsync(outer1);
+        using var converted2 = await DeterministicPackage.ConvertAsync(outer2);
 
         await Assert.That(converted1.ToArray()).IsEquivalentTo(converted2.ToArray(), CollectionOrdering.Matching);
     }
@@ -694,8 +694,8 @@ public class OpenXmlTests
     [Test]
     public async Task PptxBinaryEquality()
     {
-        using var stream1 = DeterministicPackage.Convert(CreatePresentation());
-        using var stream2 = DeterministicPackage.Convert(CreatePresentation());
+        using var stream1 = await DeterministicPackage.ConvertAsync(CreatePresentation());
+        using var stream2 = await DeterministicPackage.ConvertAsync(CreatePresentation());
 
         var bytes1 = stream1.ToArray();
         var bytes2 = stream2.ToArray();
@@ -707,7 +707,7 @@ public class OpenXmlTests
     public async Task ValidateConvertedPptx()
     {
         var stream = CreatePresentation();
-        var result = DeterministicPackage.Convert(stream);
+        var result = await DeterministicPackage.ConvertAsync(stream);
         result.Position = 0;
 
         using var document = PresentationDocument.Open(result, false);

@@ -146,7 +146,7 @@ public class Tests
     [Arguments(Extension.docx)]
     public async Task RelationshipIdsAreDeterministic(Extension extension)
     {
-        var stream = Convert(extension);
+        var stream = await ConvertAsync(extension);
         stream.Position = 0;
         using var archive = new Archive(stream, ZipArchiveMode.Read);
         foreach (var entry in archive.Entries)
@@ -156,7 +156,7 @@ public class Tests
                 continue;
             }
 
-            using var entryStream = entry.Open();
+            using var entryStream = await entry.OpenAsync();
             var xml = XDocument.Load(entryStream);
             var ids = xml.Root!.Elements()
                 .Select(_ => _.Attribute("Id")?.Value)
@@ -176,11 +176,11 @@ public class Tests
     [Arguments(Extension.docx)]
     public async Task ContentTypesAreSorted(Extension extension)
     {
-        var stream = Convert(extension);
+        var stream = await ConvertAsync(extension);
         stream.Position = 0;
         using var archive = new Archive(stream, ZipArchiveMode.Read);
         var contentTypes = archive.GetEntry("[Content_Types].xml")!;
-        using var entryStream = contentTypes.Open();
+        using var entryStream = await contentTypes.OpenAsync();
         var xml = XDocument.Load(entryStream);
         var elements = xml.Root!.Elements().ToList();
 
@@ -258,7 +258,7 @@ public class Tests
     [Test]
     public async Task NupkgSignatureIsRemoved()
     {
-        var stream = Convert(Extension.nupkg);
+        var stream = await ConvertAsync(Extension.nupkg);
         stream.Position = 0;
         using var archive = new Archive(stream, ZipArchiveMode.Read);
         await Assert.That(archive.GetEntry(".signature.p7s")).IsNull();
