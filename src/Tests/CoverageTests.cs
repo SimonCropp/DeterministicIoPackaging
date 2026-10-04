@@ -188,6 +188,97 @@ public class CoverageTests
         await AssertContentRefsAreDeterministic(result, "ppt/handoutMasters/handoutMaster1.xml");
     }
 
+    // The guid of a text field is made up on every save by a producer that builds
+    // the presentation in code. Each part numbers its own, in document order, and
+    // fields that shared a guid within a part still share an id.
+    [Test]
+    public async Task PptxPatcher_RenumbersFieldIdsWithinEachPart()
+    {
+        static string Slide(params string[] fieldIds)
+        {
+            var fields = string.Concat(
+                fieldIds.Select(_ => $"""<a:fld id="{_}" type="slidenum"><a:t>1</a:t></a:fld>"""));
+            return $"""
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <p:cSld><p:spTree><p:sp><p:txBody><a:p>{fields}</a:p></p:txBody></p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """;
+        }
+
+        const string slideRels = """
+            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+              <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml" />
+            </Relationships>
+            """;
+
+        static List<string> FieldIds(Stream zip, string entryPath)
+        {
+            XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
+            return ReadEntryXml(zip, entryPath)
+                .Descendants(a + "fld")
+                .Select(_ => _.Attribute("id")!.Value)
+                .ToList();
+        }
+
+        MemoryStream Build() =>
+            BuildZip(new()
+            {
+                ["ppt/slides/slide1.xml"] = Slide(
+                    $"{{{Guid.NewGuid().ToString().ToUpperInvariant()}}}",
+                    $"{{{Guid.NewGuid().ToString().ToUpperInvariant()}}}"),
+                ["ppt/slides/_rels/slide1.xml.rels"] = slideRels,
+                ["ppt/slides/slide2.xml"] = Slide(
+                    "{B6F15528-21DE-4FAA-801E-634DDDAF4B2B}",
+                    "{11111111-2222-3333-4444-555555555555}",
+                    "{B6F15528-21DE-4FAA-801E-634DDDAF4B2B}"),
+                ["ppt/slides/_rels/slide2.xml.rels"] = slideRels
+            });
+
+        var first = DeterministicPackage.Convert(Build());
+        var second = DeterministicPackage.Convert(Build());
+
+        const string one = "{00000001-0000-0000-0000-000000000000}";
+        const string two = "{00000002-0000-0000-0000-000000000000}";
+        using (Assert.Multiple())
+        {
+            await Assert.That(FieldIds(first, "ppt/slides/slide1.xml")).IsEquivalentTo([one, two], CollectionOrdering.Matching);
+            await Assert.That(FieldIds(first, "ppt/slides/slide2.xml")).IsEquivalentTo([one, two, one], CollectionOrdering.Matching);
+            await Assert.That(first.ToArray()).IsEquivalentTo(second.ToArray(), CollectionOrdering.Matching);
+        }
+    }
+
+    // Aspose.Slides stamps the time of the save as the time last printed.
+    [Test]
+    public async Task CorePatcher_RemovesLastPrinted()
+    {
+        const string core = """
+            <cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties"
+                               xmlns:dc="http://purl.org/dc/elements/1.1/"
+                               xmlns:dcterms="http://purl.org/dc/terms/"
+                               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+              <dc:title>The title</dc:title>
+              <cp:lastPrinted>2026-10-04T10:15:30Z</cp:lastPrinted>
+              <dcterms:modified xsi:type="dcterms:W3CDTF">2026-10-04T10:15:30Z</dcterms:modified>
+            </cp:coreProperties>
+            """;
+
+        var zip = BuildZip(new()
+        {
+            ["docProps/core.xml"] = core
+        });
+
+        var result = DeterministicPackage.Convert(zip);
+        var names = ReadEntryXml(result, "docProps/core.xml")
+            .Root!
+            .Elements()
+            .Select(_ => _.Name.LocalName)
+            .ToList();
+
+        await Assert.That(names).IsEquivalentTo(["title"], CollectionOrdering.Matching);
+    }
+
     // Gap 3: psmdcp skip in IsSkippedEntry.
     // Entries under package/services/metadata/core-properties/ with .psmdcp suffix
     // must be removed from the output.

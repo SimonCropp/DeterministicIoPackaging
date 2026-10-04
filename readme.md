@@ -31,7 +31,9 @@ Example file formats that leverage System.IO.Packaging
  * For the relationships entry `_rels/.rels`
    * Remove the `Relationship` for the `.psmdcp` entry
  * For the relationships entry `docProps/core.xml`
-   * Remove the `creator`, `created`, `lastModifiedBy`, and `modified` elements
+   * Remove the `creator`, `created`, `lastModifiedBy`, `lastPrinted`, and `modified` elements
+ * For the parts of a presentation (slides, slide layouts, slide masters, notes)
+   * Replace the guid `id` of each text field (`a:fld`, e.g. a slide number or a date) with a number, counted within the part. A producer that builds a presentation in code generates those guids anew on every save.
  * For password protection in worksheets (`sheetProtection`, `protectedRange`), the workbook (`workbookProtection`, `fileSharing`), and Word parts such as `word/settings.xml` (`documentProtection`, `writeProtection`)
    * Replace the salt and hash (`saltValue`/`hashValue`, `salt`/`hash`, and the `workbook*`/`revisions*` variants) with zero bytes of the same length. The salt is random, so it differs every time a protected document is produced. The original password no longer unlocks the converted document.
 
