@@ -7,6 +7,7 @@
     static XName creator = dc + "creator";
     static XNamespace cp = "http://schemas.openxmlformats.org/package/2006/metadata/core-properties";
     static XName lastModifiedBy = cp + "lastModifiedBy";
+    static XName lastPrinted = cp + "lastPrinted";
     static XNamespace dcterms = "http://purl.org/dc/terms/";
     static XName created = dcterms + "created";
     static XName modified = dcterms + "modified";
@@ -18,7 +19,9 @@
         root.Element(lastModifiedBy)?.Remove();
         root.Element(created)?.Remove();
         root.Element(modified)?.Remove();
-
+        // Not only when the user printed: Aspose.Slides stamps the time of the save
+        // here for a presentation built in code.
+        root.Element(lastPrinted)?.Remove();
     }
 
     public bool IsMatch(Entry entry) =>

@@ -28,7 +28,7 @@ public class ZipPlatformNormalizerTests
     [Test]
     public async Task ConvertProducesOsIndependentCentralDirectory()
     {
-        using var result = DeterministicPackage.Convert(BuildArchive());
+        using var result = await DeterministicPackage.ConvertAsync(BuildArchive());
 
         await AssertNormalized(result.ToArray());
     }

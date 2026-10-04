@@ -79,24 +79,24 @@ public class PngNormalizerTests
         using (var archive = new Archive(zipSource, ZipArchiveMode.Create, leaveOpen: true))
         {
             var entry = archive.CreateEntry("word/media/image1.png");
-            using var entryStream = entry.Open();
+            using var entryStream = await entry.OpenAsync();
             entryStream.Write(png);
         }
 
         zipSource.Position = 0;
-        using var result1 = DeterministicPackage.Convert(zipSource);
+        using var result1 = await DeterministicPackage.ConvertAsync(zipSource);
 
         var png2 = BuildPng(CompressionLevel.Optimal);
         using var zipSource2 = new MemoryStream();
         using (var archive = new Archive(zipSource2, ZipArchiveMode.Create, leaveOpen: true))
         {
             var entry = archive.CreateEntry("word/media/image1.png");
-            using var entryStream = entry.Open();
+            using var entryStream = await entry.OpenAsync();
             entryStream.Write(png2);
         }
 
         zipSource2.Position = 0;
-        using var result2 = DeterministicPackage.Convert(zipSource2);
+        using var result2 = await DeterministicPackage.ConvertAsync(zipSource2);
 
         await Assert.That(result1.ToArray()).IsEquivalentTo(result2.ToArray(), CollectionOrdering.Matching);
     }
