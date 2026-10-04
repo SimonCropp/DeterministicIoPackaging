@@ -10,19 +10,23 @@
 // are populated before this patcher runs.
 class WordPartPatcher(WordPartRelationshipPatcher relsPatcher) : IPatcher
 {
-    public bool IsMatch(Entry entry) =>
-        entry.FullName.StartsWith("word/") &&
-        entry.FullName != "word/document.xml" &&
-        entry.FullName != "word/numbering.xml" &&
-        !entry.FullName.Contains("/_rels/") &&
-        entry.FullName.EndsWith(".xml");
+    public bool IsMatch(Entry entry)
+    {
+        var name = entry.FullName;
+        return name.StartsWith("word/") &&
+               name != "word/document.xml" &&
+               name != "word/numbering.xml" &&
+               !name.Contains("/_rels/") &&
+               name.EndsWith(".xml");
+    }
 
     public void PatchXml(XDocument xml, string entryName)
     {
         WordRevisionMarkers.Strip(xml);
         ProtectionHashes.Scrub(xml);
 
-        if (relsPatcher.IdMappings.TryGetValue(entryName, out var mapping) && mapping.Count > 0)
+        if (relsPatcher.IdMappings.TryGetValue(entryName, out var mapping) &&
+            mapping.Count > 0)
         {
             RelationshipRenumber.RemapIds(xml, mapping);
         }

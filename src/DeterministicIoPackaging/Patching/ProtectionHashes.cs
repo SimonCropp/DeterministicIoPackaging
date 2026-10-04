@@ -16,7 +16,7 @@
 // so only the root's children are inspected rather than walking a potentially large sheet.
 static class ProtectionHashes
 {
-    static readonly HashSet<string> elements =
+    static HashSet<string> elements =
     [
         "sheetProtection",
         "protectedRange",
@@ -26,7 +26,7 @@ static class ProtectionHashes
         "writeProtection"
     ];
 
-    static readonly HashSet<string> attributes =
+    static HashSet<string> attributes =
     [
         "salt",
         "hash",

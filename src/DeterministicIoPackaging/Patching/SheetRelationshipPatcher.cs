@@ -8,9 +8,12 @@ class SheetRelationshipPatcher : IPatcher
     // relationships share the same target (e.g. two hyperlinks to the same URL).
     internal Dictionary<string, Dictionary<string, string>> TargetMappings { get; } = [];
 
-    public bool IsMatch(Entry entry) =>
-        entry.FullName.StartsWith("xl/worksheets/_rels/") &&
-        entry.FullName.EndsWith(".xml.rels");
+    public bool IsMatch(Entry entry)
+    {
+        var name = entry.FullName;
+        return name.StartsWith("xl/worksheets/_rels/") &&
+               name.EndsWith(".xml.rels");
+    }
 
     public void PatchXml(XDocument xml, string entryName)
     {

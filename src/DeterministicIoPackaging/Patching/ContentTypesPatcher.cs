@@ -160,7 +160,8 @@ class ContentTypesPatcher(IReadOnlyCollection<string> partNames) :
         {
             var partName = (string?) element.Attribute("PartName");
             var contentType = (string?) element.Attribute("ContentType");
-            if (partName != null && contentType != null)
+            if (partName != null &&
+                contentType != null)
             {
                 overrides[partName] = contentType;
             }
@@ -172,13 +173,21 @@ class ContentTypesPatcher(IReadOnlyCollection<string> partNames) :
     // Part names in the content-type map are absolute ("/xl/workbook.xml"); the
     // zip entry names are relative ("xl/workbook.xml"). Normalize entry names to
     // the leading-slash form so they line up with the map's PartName values.
-    internal static string ToPartName(string entryFullName) =>
-        entryFullName.StartsWith('/') ? entryFullName : "/" + entryFullName;
+    internal static string ToPartName(string entryFullName)
+    {
+        if (entryFullName.StartsWith('/'))
+        {
+            return entryFullName;
+        }
+
+        return "/" + entryFullName;
+    }
 
     static string Extension(string partName)
     {
         var lastDot = partName.LastIndexOf('.');
-        if (lastDot < 0 || lastDot == partName.Length - 1)
+        if (lastDot < 0 ||
+            lastDot == partName.Length - 1)
         {
             return "";
         }
@@ -190,7 +199,7 @@ class ContentTypesPatcher(IReadOnlyCollection<string> partNames) :
             return "";
         }
 
-        return partName.Substring(lastDot + 1).ToLowerInvariant();
+        return partName[(lastDot + 1)..].ToLowerInvariant();
     }
 
     readonly record struct PartContentType(string PartName, string ContentType);

@@ -143,9 +143,10 @@ public static partial class DeterministicPackage
 
     static async Task DuplicateEntryAsync(Entry sourceEntry, Archive targetArchive, PatcherSet currentPatchers, ChangeRecorder? recorder, Cancel cancel)
     {
+        var name = sourceEntry.FullName;
         if (IsSkippedEntry(sourceEntry))
         {
-            recorder?.Record(ConvertChangeKind.Removed, sourceEntry.FullName);
+            recorder?.Record(ConvertChangeKind.Removed, name);
             return;
         }
 
@@ -158,15 +159,15 @@ public static partial class DeterministicPackage
         {
             var xml = await XDocument.LoadAsync(sourceStream, LoadOptions.None, cancel);
             var before = Snapshot(xml, recorder);
-            patcher.PatchXml(xml, sourceEntry.FullName);
-            RecordIfPatched(before, xml, recorder, sourceEntry.FullName);
+            patcher.PatchXml(xml, name);
+            RecordIfPatched(before, xml, recorder, name);
             await SaveXml(xml, targetStream, cancel);
             return;
         }
 
-        if (sourceEntry.FullName.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+        if (name.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
         {
-            await NormalizePngAsync(sourceStream, targetStream, recorder, sourceEntry.FullName, cancel);
+            await NormalizePngAsync(sourceStream, targetStream, recorder, name, cancel);
             return;
         }
 
@@ -175,12 +176,12 @@ public static partial class DeterministicPackage
             var xml = await XDocument.LoadAsync(sourceStream, LoadOptions.None, cancel);
             var before = Snapshot(xml, recorder);
             FixPrefixedDefaultNamespace(xml);
-            RecordIfPatched(before, xml, recorder, sourceEntry.FullName);
+            RecordIfPatched(before, xml, recorder, name);
             await SaveXml(xml, targetStream, cancel);
             return;
         }
 
-        await CopyOrRecurseZipAsync(sourceStream, targetStream, sourceEntry.Length, recorder, sourceEntry.FullName, cancel);
+        await CopyOrRecurseZipAsync(sourceStream, targetStream, sourceEntry.Length, recorder, name, cancel);
     }
 
     /// <inheritdoc cref="NormalizePng"/>

@@ -118,11 +118,11 @@ public static partial class DeterministicPackage
     // Used to detect nested ZIP packages (e.g. xlsx/docx/pptx embedded inside
     // word/embeddings/, ppt/embeddings/, xl/embeddings/) so they can be
     // recursively normalized rather than copied through verbatim.
-    static readonly byte[] zipLocalFileHeader = [0x50, 0x4B, 0x03, 0x04];
+    static byte[] zipLocalFileHeader = [0x50, 0x4B, 0x03, 0x04];
 
     // ZIP end-of-central-directory signature ("PK\x05\x06") — appears at the
     // start of an empty ZIP archive that contains no entries.
-    static readonly byte[] zipEndOfCentralDirectory = [0x50, 0x4B, 0x05, 0x06];
+    static byte[] zipEndOfCentralDirectory = [0x50, 0x4B, 0x05, 0x06];
 
     static bool LooksLikeZip(byte[] head, int length)
     {
@@ -247,8 +247,8 @@ public static partial class DeterministicPackage
     static int ReadUpTo(Stream source, byte[] buffer, int count) =>
         source.ReadAtLeast(buffer.AsSpan(0, count), count, throwOnEndOfStream: false);
 
-    static async Task<int> ReadUpToAsync(Stream source, byte[] buffer, int count, Cancel cancel) =>
-        await source.ReadAtLeastAsync(buffer.AsMemory(0, count), count, throwOnEndOfStream: false, cancel);
+    static ValueTask<int> ReadUpToAsync(Stream source, byte[] buffer, int count, Cancel cancel) =>
+        source.ReadAtLeastAsync(buffer.AsMemory(0, count), count, throwOnEndOfStream: false, cancel);
 
     static IOrderedEnumerable<Entry> OrderedEntries(this Archive archive) =>
         archive.Entries

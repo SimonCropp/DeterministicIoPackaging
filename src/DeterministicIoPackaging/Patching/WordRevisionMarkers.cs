@@ -12,7 +12,7 @@ static class WordRevisionMarkers
     static XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
     static XNamespace w14 = "http://schemas.microsoft.com/office/word/2010/wordml";
 
-    static readonly HashSet<XName> attributesToRemove =
+    static HashSet<XName> attributesToRemove =
     [
         w14 + "paraId",
         w14 + "textId",

@@ -1,4 +1,4 @@
-using System.Buffers.Binary;
+
 
 // ZipArchive stamps the host operating system into every central-directory
 // record: the high byte of the "version made by" field is 0 on Windows and 3
@@ -10,10 +10,10 @@ using System.Buffers.Binary;
 static class ZipPlatformNormalizer
 {
     // Central-directory file header signature "PK\x01\x02".
-    static readonly byte[] centralDirectoryHeader = [0x50, 0x4B, 0x01, 0x02];
+    static byte[] centralDirectoryHeader = [0x50, 0x4B, 0x01, 0x02];
 
     // End-of-central-directory record signature "PK\x05\x06".
-    static readonly byte[] endOfCentralDirectory = [0x50, 0x4B, 0x05, 0x06];
+    static byte[] endOfCentralDirectory = [0x50, 0x4B, 0x05, 0x06];
 
     // Fixed size of a central-directory file header before the variable-length
     // file name, extra field and comment.

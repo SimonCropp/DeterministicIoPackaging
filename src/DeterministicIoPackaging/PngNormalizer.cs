@@ -1,9 +1,7 @@
-using System.Buffers.Binary;
-
 static class PngNormalizer
 {
-    static readonly byte[] pngSignature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
-    static readonly byte[] idatType = "IDAT"u8.ToArray();
+    static byte[] pngSignature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+    static byte[] idatType = "IDAT"u8.ToArray();
 
     public static void Normalize(Stream source, Stream target)
     {

@@ -94,8 +94,12 @@ static class RelationshipRenumber
             for (var attr = descendant.FirstAttribute; attr != null; attr = attr.NextAttribute)
             {
                 var name = attr.Name;
-                if ((name == rId || name == rEmbed || name == rLink ||
-                     name == rIdStrict || name == rEmbedStrict || name == rLinkStrict) &&
+                if ((name == rId ||
+                     name == rEmbed ||
+                     name == rLink ||
+                     name == rIdStrict ||
+                     name == rEmbedStrict ||
+                     name == rLinkStrict) &&
                     mapping.TryGetValue(attr.Value, out var newId))
                 {
                     attr.SetValue(newId);
