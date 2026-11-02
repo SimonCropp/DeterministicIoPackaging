@@ -69,7 +69,7 @@
             </w:document>
             """;
 
-        var document = PatchHelper.Patch(new DocumentPatcher(new()), xml);
+        var document = PatchHelper.Patch(new DocumentPatcher(new(), new()), xml);
         return Verify(document);
     }
 }

@@ -24,6 +24,6 @@ public class DocumentPatcherBench
     public void Patch()
     {
         var doc = new XDocument(source);
-        new DocumentPatcher(relsPatcher).PatchXml(doc, "word/document.xml");
+        new DocumentPatcher(relsPatcher, new()).PatchXml(doc, "word/document.xml");
     }
 }

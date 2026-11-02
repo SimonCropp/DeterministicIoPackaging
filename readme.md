@@ -32,6 +32,12 @@ Example file formats that leverage System.IO.Packaging
    * Remove the `Relationship` for the `.psmdcp` entry
  * For the relationships entry `docProps/core.xml`
    * Remove the `creator`, `created`, `lastModifiedBy`, `lastPrinted`, and `modified` elements
+ * For the entry `docProps/custom.xml`
+   * Replace each date-time value (`vt:filetime`) with `2020-01-01T00:00:00Z`. Producers that build a document in code commonly stamp a custom property with the time of the save.
+ * For the parts of a Word document (`word/*.xml`)
+   * Remove per-save revision attributes: `w14:paraId`, `w14:textId`, the `w:rsid*` attributes, and `wp14:anchorId`/`wp14:editId` on drawings
+   * Remove the `w:date` of tracked changes (`w:ins`, `w:del`, `w:rPrChange`, ...) and comments, and `w16cex:dateUtc` in `word/commentsExtensible.xml`
+   * Renumber drawing ids (`wp:docPr`, `pic:cNvPr`) and content control ids (`w:sdtPr/w:id`) sequentially, continuing across parts so they stay unique within the document
  * For the parts of a presentation (slides, slide layouts, slide masters, notes)
    * Replace the guid `id` of each text field (`a:fld`, e.g. a slide number or a date) with a number, counted within the part. A producer that builds a presentation in code generates those guids anew on every save.
  * For password protection in worksheets (`sheetProtection`, `protectedRange`), the workbook (`workbookProtection`, `fileSharing`), and Word parts such as `word/settings.xml` (`documentProtection`, `writeProtection`)
