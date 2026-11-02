@@ -12,6 +12,7 @@ public static partial class DeterministicPackage
         var sheetRelsPatcher = new SheetRelationshipPatcher();
         var wordPartRelsPatcher = new WordPartRelationshipPatcher();
         var pptxRelsPatcher = new PptxRelationshipPatcher();
+        var wordIdNumbering = new WordIdNumbering();
         IReadOnlyList<IPatcher> patchers =
         [
             new ContentTypesPatcher(partNames),
@@ -21,10 +22,11 @@ public static partial class DeterministicPackage
             workbookRelsPatcher,
             new WorkbookPatcher(workbookRelsPatcher),
             new CorePatcher(),
+            new CustomPropertiesPatcher(),
             documentRelsPatcher,
-            new DocumentPatcher(documentRelsPatcher),
+            new DocumentPatcher(documentRelsPatcher, wordIdNumbering),
             wordPartRelsPatcher,
-            new WordPartPatcher(wordPartRelsPatcher),
+            new WordPartPatcher(wordPartRelsPatcher, wordIdNumbering),
             pptxRelsPatcher,
             new PptxContentPatcher(pptxRelsPatcher),
             new NumberingPatcher()

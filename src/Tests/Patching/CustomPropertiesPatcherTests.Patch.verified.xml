@@ -1,0 +1,13 @@
+﻿<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/custom-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">
+  <property fmtid="Guid_1" pid="2" name="Saved">
+    <vt:filetime>2020-01-01T00:00:00Z</vt:filetime>
+  </property>
+  <property fmtid="Guid_1" pid="3" name="Name">
+    <vt:lpwstr>untouched</vt:lpwstr>
+  </property>
+  <property fmtid="Guid_1" pid="4" name="Dates">
+    <vt:vector size="1" baseType="filetime">
+      <vt:filetime>2020-01-01T00:00:00Z</vt:filetime>
+    </vt:vector>
+  </property>
+</Properties>

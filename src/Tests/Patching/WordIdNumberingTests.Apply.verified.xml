@@ -1,0 +1,35 @@
+﻿<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
+  <w:sdt>
+    <w:sdtPr>
+      <w:id w:val="1" />
+      <w:date w:fullDate="2024-05-06T00:00:00Z" />
+    </w:sdtPr>
+    <w:sdtContent>
+      <w:p>
+        <w:ins w:id="1" w:author="Author">
+          <w:r>
+            <w:drawing>
+              <wp:anchor>
+                <wp:docPr id="1" name="Picture 1" />
+                <a:graphic>
+                  <a:graphicData>
+                    <pic:pic>
+                      <pic:nvPicPr>
+                        <pic:cNvPr id="2" name="Picture 1" />
+                      </pic:nvPicPr>
+                    </pic:pic>
+                  </a:graphicData>
+                </a:graphic>
+              </wp:anchor>
+            </w:drawing>
+          </w:r>
+        </w:ins>
+      </w:p>
+    </w:sdtContent>
+  </w:sdt>
+  <w:sdt>
+    <w:sdtPr>
+      <w:id w:val="2" />
+    </w:sdtPr>
+  </w:sdt>
+</w:hdr>

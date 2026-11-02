@@ -590,6 +590,173 @@ public class OpenXmlTests
         Random.Shared.Next().ToString("X8");
 
     [Test]
+    public async Task WordIdsAndDatesBinaryEquality()
+    {
+        // Two builds with different random drawing/content control ids and
+        // different change, comment and custom property times must produce
+        // identical bytes
+        using var stream1 = await DeterministicPackage.ConvertAsync(CreateDocxWithWordIdsAndDates(1));
+        using var stream2 = await DeterministicPackage.ConvertAsync(CreateDocxWithWordIdsAndDates(2));
+
+        var bytes1 = stream1.ToArray();
+        var bytes2 = stream2.ToArray();
+
+        await Assert.That(bytes1).IsEquivalentTo(bytes2, CollectionOrdering.Matching);
+    }
+
+    [Test]
+    public async Task ValidateConvertedDocxWithWordIdsAndDates()
+    {
+        var stream = CreateDocxWithWordIdsAndDates(1);
+        var result = await DeterministicPackage.ConvertAsync(stream);
+        result.Position = 0;
+
+        using var document = WordprocessingDocument.Open(result, false);
+        var validator = new OpenXmlValidator();
+        var errors = validator.Validate(document).ToList();
+
+        await Assert.That(errors).IsEmpty().Because(string.Join(Environment.NewLine, errors.Select(_ => $"{_.Description} ({_.Path})")));
+    }
+
+    static MemoryStream CreateDocxWithWordIdsAndDates(int seed)
+    {
+        var random = new Random(seed);
+        string Hex() => random.Next().ToString("X8");
+        int Id() => random.Next(int.MinValue, int.MaxValue);
+        var date = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+            .AddMinutes(random.Next(100000))
+            .ToString("yyyy-MM-ddTHH:mm:ssZ");
+
+        string Drawing(string relationshipId, int drawingId) =>
+            $"""
+             <w:r>
+               <w:drawing>
+                 <wp:inline wp14:anchorId="{Hex()}" wp14:editId="{Hex()}">
+                   <wp:extent cx="952500" cy="952500"/>
+                   <wp:docPr id="{drawingId}" name="Picture"/>
+                   <a:graphic>
+                     <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                       <pic:pic>
+                         <pic:nvPicPr>
+                           <pic:cNvPr id="{drawingId}" name="Picture"/>
+                           <pic:cNvPicPr/>
+                         </pic:nvPicPr>
+                         <pic:blipFill>
+                           <a:blip r:embed="{relationshipId}"/>
+                           <a:stretch><a:fillRect/></a:stretch>
+                         </pic:blipFill>
+                         <pic:spPr>
+                           <a:xfrm><a:off x="0" y="0"/><a:ext cx="952500" cy="952500"/></a:xfrm>
+                           <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+                         </pic:spPr>
+                       </pic:pic>
+                     </a:graphicData>
+                   </a:graphic>
+                 </wp:inline>
+               </w:drawing>
+             </w:r>
+             """;
+
+        const string namespaces =
+            """
+            xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+            xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+            xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing"
+            xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+            xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"
+            xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+            mc:Ignorable="wp14"
+            """;
+
+        var pngBytes = Convert.FromBase64String(
+            "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGP4z8AARAwQCgAf7gP9i18U1AAAAABJRU5ErkJggg==");
+
+        var stream = new MemoryStream();
+        using (var document = WordprocessingDocument.Create(stream, WordprocessingDocumentType.Document))
+        {
+            var mainPart = document.AddMainDocumentPart();
+
+            var bodyImage = mainPart.AddImagePart("image/png", "rBodyImage");
+            bodyImage.FeedData(new MemoryStream(pngBytes));
+
+            var headerPart = mainPart.AddNewPart<HeaderPart>("rHeader");
+            var headerImage = headerPart.AddImagePart("image/png", "rHeaderImage");
+            headerImage.FeedData(new MemoryStream(pngBytes));
+            FeedXml(
+                headerPart,
+                $"""
+                 <w:hdr {namespaces}>
+                   <w:sdt>
+                     <w:sdtPr><w:id w:val="{Id()}"/></w:sdtPr>
+                     <w:sdtContent>
+                       <w:p>{Drawing("rHeaderImage", random.Next())}</w:p>
+                     </w:sdtContent>
+                   </w:sdt>
+                 </w:hdr>
+                 """);
+
+            var commentsPart = mainPart.AddNewPart<WordprocessingCommentsPart>("rComments");
+            FeedXml(
+                commentsPart,
+                $"""
+                 <w:comments {namespaces}>
+                   <w:comment w:id="0" w:author="Author" w:date="{date}">
+                     <w:p><w:r><w:t>Comment</w:t></w:r></w:p>
+                   </w:comment>
+                 </w:comments>
+                 """);
+
+            FeedXml(
+                mainPart,
+                $"""
+                 <w:document {namespaces}>
+                   <w:body>
+                     <w:sdt>
+                       <w:sdtPr><w:id w:val="{Id()}"/></w:sdtPr>
+                       <w:sdtContent>
+                         <w:p>
+                           <w:commentRangeStart w:id="0"/>
+                           <w:ins w:id="1" w:author="Author" w:date="{date}">
+                             <w:r><w:t>Inserted</w:t></w:r>
+                           </w:ins>
+                           <w:del w:id="2" w:author="Author" w:date="{date}">
+                             <w:r><w:delText>Deleted</w:delText></w:r>
+                           </w:del>
+                           <w:commentRangeEnd w:id="0"/>
+                           <w:r><w:commentReference w:id="0"/></w:r>
+                         </w:p>
+                       </w:sdtContent>
+                     </w:sdt>
+                     <w:p>{Drawing("rBodyImage", random.Next())}</w:p>
+                     <w:sectPr>
+                       <w:headerReference w:type="default" r:id="rHeader"/>
+                     </w:sectPr>
+                   </w:body>
+                 </w:document>
+                 """);
+
+            var customPart = document.AddCustomFilePropertiesPart();
+            FeedXml(
+                customPart,
+                $$"""
+                  <Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/custom-properties"
+                              xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">
+                    <property fmtid="{D5CDD505-2E9C-101B-9397-08002B2CF9AE}" pid="2" name="Saved">
+                      <vt:filetime>{{date}}</vt:filetime>
+                    </property>
+                  </Properties>
+                  """);
+        }
+
+        stream.Position = 0;
+        return stream;
+    }
+
+    static void FeedXml(OpenXmlPart part, string xml) =>
+        part.FeedData(new MemoryStream(System.Text.Encoding.UTF8.GetBytes(xml)));
+
+    [Test]
     public async Task ValidateConvertedDocxWithHeaderHyperlink()
     {
         var stream = CreateDocxWithHeaderHyperlink();
