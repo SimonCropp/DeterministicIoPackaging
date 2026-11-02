@@ -38,7 +38,8 @@ public class OpenXmlTests
         using var docStream = await docEntry.OpenAsync();
         var docXml = XDocument.Load(docStream);
         XNamespace r = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
-        var embedRefs = docXml.Descendants().Attributes(r + "embed")
+        var embedRefs = docXml.Descendants()
+            .Attributes(r + "embed")
             .Select(_ => _.Value)
             .ToList();
 
@@ -490,7 +491,9 @@ public class OpenXmlTests
             var xml = XDocument.Load(stream);
             foreach (var attrName in attributesToCheck)
             {
-                var found = xml.Descendants().Attributes(attrName).FirstOrDefault();
+                var found = xml.Descendants()
+                    .Attributes(attrName)
+                    .FirstOrDefault();
                 await Assert.That(found).IsNull().Because($"Entry '{entry.FullName}' still contains attribute '{attrName}'");
             }
         }

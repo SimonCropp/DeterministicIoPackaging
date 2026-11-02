@@ -309,7 +309,6 @@ public class CoverageTests
         using var archive = new Archive(result, ZipArchiveMode.Read);
 
         using (Assert.Multiple())
-
         {
             await Assert.That(archive.Entries.Any(_ => _.FullName.EndsWith(".psmdcp"))).IsFalse();
             await Assert.That(archive.GetEntry("some/other/entry.xml")).IsNotNull();
@@ -401,7 +400,10 @@ public class CoverageTests
     {
         var xml = ReadEntryXml(zip, entryPath);
         XNamespace r = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
-        var refs = xml.Descendants().Attributes(r + "id").Select(_ => _.Value).ToList();
+        var refs = xml.Descendants()
+            .Attributes(r + "id")
+            .Select(_ => _.Value)
+            .ToList();
         await Assert.That(refs).IsNotEmpty().Because($"{entryPath} should contain at least one r:id reference");
         foreach (var refId in refs)
         {
