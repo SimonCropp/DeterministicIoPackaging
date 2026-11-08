@@ -49,6 +49,26 @@ public class ContentTypesPatcherTests
     public Task MostCommonBecomesDefault() =>
         Verify(Patch(variantDefaultIsWorkbook));
 
+    // OPC part names are case-insensitive: an Override whose PartName differs from the zip entry
+    // only in case still applies to it, and is written back under the entry's name.
+    [Test]
+    public async Task OverrideMatchesPartNameIgnoringCase()
+    {
+        const string xml =
+            """
+            <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+              <Default Extension="xml" ContentType="application/xml" />
+              <Override PartName="/word/Document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml" />
+            </Types>
+            """;
+
+        var patched = PatchHelper
+            .Patch(new ContentTypesPatcher(["/word/document.xml"]), xml, "[Content_Types].xml");
+
+        await Assert.That(Resolve(patched, "/word/document.xml"))
+            .IsEqualTo("application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml");
+    }
+
     // Every part still resolves to the content type it had in the input: the
     // rewrite must be OPC-preserving, only relocating declarations between
     // Default and Override.
