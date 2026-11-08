@@ -146,8 +146,11 @@ Two things worth knowing before touching `RecordIfPatched`:
   re-emitted on save and the bytes are identical — but `DeepEquals` reports a difference, which made
   every `.rels` part of an already converted package report as patched. `ConvertChangeTests`
   `ReportsNothingOnASecondConversion` is what caught it and is what keeps it caught.
-- **The "before" is the loaded tree, not the source bytes.** `XDocument.Load` drops insignificant
-  whitespace, so a prettified input and a compact one snapshot the same. Comparing source bytes
+- **The "before" is the loaded tree, not the source bytes.** `LoadXml` drops formatting whitespace
+  (whitespace-only text between elements), so a prettified input and a compact one snapshot the same.
+  It deliberately does *not* use a default `XDocument.Load`, which also drops a whitespace-only text
+  node that is an element's only content — DrawingML `<a:t> </a:t>` has no `xml:space="preserve"`,
+  so that emptied space-only runs (Determinize#22). Comparing source bytes
   instead would report every XML part of every prettified package and bury the one that mattered.
 
 ## Project Structure

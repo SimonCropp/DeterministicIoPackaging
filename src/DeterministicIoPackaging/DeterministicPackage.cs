@@ -61,7 +61,7 @@ public static partial class DeterministicPackage
         var patcher = currentPatchers.Find(sourceEntry);
         if (patcher != null)
         {
-            var xml = XDocument.Load(sourceStream);
+            var xml = LoadXml(sourceStream);
             var before = Snapshot(xml, recorder);
             patcher.PatchXml(xml, sourceEntry.FullName);
             RecordIfPatched(before, xml, recorder, sourceEntry.FullName);
@@ -77,7 +77,7 @@ public static partial class DeterministicPackage
 
         if (IsSpreadsheetXml(sourceEntry))
         {
-            var xml = XDocument.Load(sourceStream);
+            var xml = LoadXml(sourceStream);
             var before = Snapshot(xml, recorder);
             FixPrefixedDefaultNamespace(xml);
             RecordIfPatched(before, xml, recorder, sourceEntry.FullName);
@@ -159,7 +159,7 @@ public static partial class DeterministicPackage
         var patcher = currentPatchers.Find(sourceEntry);
         if (patcher != null)
         {
-            var xml = await XDocument.LoadAsync(sourceStream, LoadOptions.None, cancel);
+            var xml = await LoadXmlAsync(sourceStream, cancel);
             var before = Snapshot(xml, recorder);
             patcher.PatchXml(xml, name);
             RecordIfPatched(before, xml, recorder, name);
@@ -175,7 +175,7 @@ public static partial class DeterministicPackage
 
         if (IsSpreadsheetXml(sourceEntry))
         {
-            var xml = await XDocument.LoadAsync(sourceStream, LoadOptions.None, cancel);
+            var xml = await LoadXmlAsync(sourceStream, cancel);
             var before = Snapshot(xml, recorder);
             FixPrefixedDefaultNamespace(xml);
             RecordIfPatched(before, xml, recorder, name);
@@ -205,6 +205,82 @@ public static partial class DeterministicPackage
         RecordIfDifferent(before, after, recorder, entryName);
         after.Position = 0;
         await after.CopyToAsync(targetStream, cancel);
+    }
+
+    // A default XDocument.Load drops every whitespace-only text node not under xml:space="preserve".
+    // Word marks its runs with that attribute, but DrawingML (<a:t>) and SpreadsheetML (<t>) need not,
+    // so a run holding only a space was emptied and the words either side of it joined up.
+    // https://github.com/SimonCropp/Determinize/issues/22
+    //
+    // So load everything, then drop only what is formatting: whitespace between elements. A
+    // whitespace-only text node that is an element's only child is that element's content, and
+    // stays. Indentation still goes, so a prettified part and a compact one still converge.
+    static XDocument LoadXml(Stream stream)
+    {
+        var xml = XDocument.Load(stream, LoadOptions.PreserveWhitespace);
+        RemoveFormattingWhitespace(xml);
+        return xml;
+    }
+
+    static async Task<XDocument> LoadXmlAsync(Stream stream, Cancel cancel)
+    {
+        var xml = await XDocument.LoadAsync(stream, LoadOptions.PreserveWhitespace, cancel);
+        RemoveFormattingWhitespace(xml);
+        return xml;
+    }
+
+    static XName xmlSpace = XNamespace.Xml + "space";
+
+    internal static void RemoveFormattingWhitespace(XDocument xml)
+    {
+        var formatting = xml
+            .DescendantNodes()
+            .OfType<XText>()
+            .Where(IsFormattingWhitespace)
+            .ToList();
+        foreach (var text in formatting)
+        {
+            text.Remove();
+        }
+    }
+
+    static bool IsFormattingWhitespace(XText text)
+    {
+        if (text is XCData ||
+            !string.IsNullOrWhiteSpace(text.Value))
+        {
+            return false;
+        }
+
+        var parent = text.Parent;
+        // Outside the root element: nothing there is content.
+        if (parent == null)
+        {
+            return true;
+        }
+
+        // The element's only content: real text, e.g. <a:t> </a:t>.
+        if (!parent.Elements().Any())
+        {
+            return false;
+        }
+
+        return !IsSpacePreserved(parent);
+    }
+
+    // xml:space is inherited; the nearest declaration wins.
+    static bool IsSpacePreserved(XElement element)
+    {
+        for (var current = element; current != null; current = current.Parent)
+        {
+            var attribute = current.Attribute(xmlSpace);
+            if (attribute != null)
+            {
+                return attribute.Value == "preserve";
+            }
+        }
+
+        return false;
     }
 
     static bool IsSpreadsheetXml(Entry entry) =>
