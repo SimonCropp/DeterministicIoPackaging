@@ -37,11 +37,12 @@ public static partial class DeterministicPackage
             var patchers = CreatePatchers(CollectPartNames(sourceArchive));
             var ordered = sourceArchive.OrderedEntries().ToList();
             RecordOrder(sourceArchive, ordered, recorder);
+            var relationshipParts = PatchRelationshipParts(ordered, patchers, recorder);
             foreach (var sourceEntry in ordered)
             {
                 try
                 {
-                    DuplicateEntry(sourceEntry, targetArchive, patchers, recorder);
+                    DuplicateEntry(sourceEntry, targetArchive, patchers, relationshipParts, recorder);
                 }
                 catch (Exception exception) when (exception is not OperationCanceledException)
                 {
@@ -82,11 +83,12 @@ public static partial class DeterministicPackage
             var patchers = CreatePatchers(CollectPartNames(sourceArchive));
             var ordered = sourceArchive.OrderedEntries().ToList();
             RecordOrder(sourceArchive, ordered, recorder);
+            var relationshipParts = await PatchRelationshipPartsAsync(ordered, patchers, recorder, token);
             foreach (var sourceEntry in ordered)
             {
                 try
                 {
-                    await DuplicateEntryAsync(sourceEntry, targetArchive, patchers, recorder, token);
+                    await DuplicateEntryAsync(sourceEntry, targetArchive, patchers, relationshipParts, recorder, token);
                 }
                 catch (Exception exception) when (exception is not OperationCanceledException)
                 {

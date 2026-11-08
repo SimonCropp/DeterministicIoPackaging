@@ -47,7 +47,7 @@ The codebase uses a patcher pattern for normalizing OOXML content:
 - `IsMatch(Entry entry)` - determines which files the patcher applies to (e.g., "word/document.xml")
 - `PatchXml(XDocument xml)` - modifies the XML in-place
 - Register patchers via `CreatePatchers()` factory in `DeterministicPackage.cs` (fresh instance per conversion)
-- **Order matters** - relationship patchers must run before their content patchers (e.g., `WorkbookRelationshipPatcher` before `WorkbookPatcher`)
+- **Order matters** - relationship patchers must run before their content patchers (e.g., `WorkbookRelationshipPatcher` before `WorkbookPatcher`). Every `.rels` part is patched up front (`PatchRelationshipParts`) and held until its turn to be written, so this does not depend on entry names: ordinal order alone would put `word/Footer1.xml` before `word/_rels/Footer1.xml.rels`
 
 #### Paired Patchers
 
