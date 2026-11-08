@@ -126,7 +126,7 @@ public class MediaEntryTests
         var bytes = new byte[length];
         for (var i = 0; i < length; i++)
         {
-            bytes[i] = (i / 50000) % 2 == 0 ? (byte) random.Next(256) : (byte) (i % 13);
+            bytes[i] = i / 50000 % 2 == 0 ? (byte) random.Next(256) : (byte) (i % 13);
         }
 
         return bytes;

@@ -757,7 +757,7 @@ public class OpenXmlTests
     }
 
     static void FeedXml(OpenXmlPart part, string xml) =>
-        part.FeedData(new MemoryStream(System.Text.Encoding.UTF8.GetBytes(xml)));
+        part.FeedData(new MemoryStream(Encoding.UTF8.GetBytes(xml)));
 
     [Test]
     public async Task ValidateConvertedDocxWithHeaderHyperlink()
@@ -770,7 +770,9 @@ public class OpenXmlTests
         var validator = new OpenXmlValidator();
         var errors = validator.Validate(document).ToList();
 
-        await Assert.That(errors).IsEmpty().Because(string.Join(Environment.NewLine, errors.Select(_ => $"{_.Description} ({_.Path})")));
+        await Assert.That(errors)
+            .IsEmpty()
+            .Because(string.Join(Environment.NewLine, errors.Select(_ => $"{_.Description} ({_.Path})")));
     }
 
     static Cell CreateCell(string reference, string value) =>
@@ -778,7 +780,7 @@ public class OpenXmlTests
         {
             CellReference = reference,
             DataType = CellValues.InlineString,
-            InlineString = [with(new Text(value))]
+            InlineString = new(new Text(value))
         };
 
     [Test]
@@ -810,7 +812,8 @@ public class OpenXmlTests
         using var converted1 = await DeterministicPackage.ConvertAsync(outer1);
         using var converted2 = await DeterministicPackage.ConvertAsync(outer2);
 
-        await Assert.That(converted1.ToArray()).IsEquivalentTo(converted2.ToArray(), CollectionOrdering.Matching);
+        await Assert.That(converted1.ToArray())
+            .IsEquivalentTo(converted2.ToArray(), CollectionOrdering.Matching);
     }
 
     static MemoryStream BuildOuterWithNestedZip(DateTimeOffset nestedLastWrite)
@@ -884,7 +887,9 @@ public class OpenXmlTests
         var validator = new OpenXmlValidator();
         var errors = validator.Validate(document).ToList();
 
-        await Assert.That(errors).IsEmpty().Because(string.Join(Environment.NewLine, errors.Select(_ => $"{_.Description} ({_.Path})")));
+        await Assert.That(errors)
+            .IsEmpty()
+            .Because(string.Join(Environment.NewLine, errors.Select(_ => $"{_.Description} ({_.Path})")));
     }
 
     static MemoryStream CreatePresentation()
