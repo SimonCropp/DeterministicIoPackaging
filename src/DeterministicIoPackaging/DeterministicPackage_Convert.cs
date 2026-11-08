@@ -39,7 +39,14 @@ public static partial class DeterministicPackage
             RecordOrder(sourceArchive, ordered, recorder);
             foreach (var sourceEntry in ordered)
             {
-                DuplicateEntry(sourceEntry, targetArchive, patchers, recorder);
+                try
+                {
+                    DuplicateEntry(sourceEntry, targetArchive, patchers, recorder);
+                }
+                catch (Exception exception) when (exception is not OperationCanceledException)
+                {
+                    throw EntryFailed(sourceEntry, exception);
+                }
             }
         }
 
@@ -77,7 +84,14 @@ public static partial class DeterministicPackage
             RecordOrder(sourceArchive, ordered, recorder);
             foreach (var sourceEntry in ordered)
             {
-                await DuplicateEntryAsync(sourceEntry, targetArchive, patchers, recorder, token);
+                try
+                {
+                    await DuplicateEntryAsync(sourceEntry, targetArchive, patchers, recorder, token);
+                }
+                catch (Exception exception) when (exception is not OperationCanceledException)
+                {
+                    throw EntryFailed(sourceEntry, exception);
+                }
             }
         }
 
@@ -85,6 +99,11 @@ public static partial class DeterministicPackage
         target.Position = 0;
         return target;
     }
+
+    // Names the entry, so a failure in a package with hundreds of parts points at the one to look at.
+    // A nested package's failure is wrapped again by each enclosing package, giving the full path.
+    static InvalidDataException EntryFailed(Entry entry, Exception exception) =>
+        new($"Failed to convert entry '{entry.FullName}': {exception.Message}", exception);
 
     // The source listing against the order the entries are about to be written in, with the dropped
     // entries excluded from both: those are already reported as removed, and their absence is not a
@@ -141,69 +160,98 @@ public static partial class DeterministicPackage
                 head[3] == zipEndOfCentralDirectory[3]);
     }
 
-    // Copies source → target, recursively normalizing the entry if its bytes
-    // begin with a ZIP magic signature (i.e. the entry is itself a ZIP package
-    // such as an embedded xlsx inside a docx). Without this recursion, nested
-    // packages flow through with whatever non-deterministic deflate/timestamps
-    // their producer emitted, defeating the deterministic guarantee for the
-    // outer package.
-    static void CopyOrRecurseZip(Stream source, Stream target, long sourceLength, ChangeRecorder? recorder, string entryName)
+    // Recursively normalizes an entry whose bytes begin with a ZIP magic
+    // signature (i.e. the entry is itself a ZIP package such as an embedded
+    // xlsx inside a docx). Without this recursion, nested packages flow through
+    // with whatever non-deterministic deflate/timestamps their producer emitted,
+    // defeating the deterministic guarantee for the outer package.
+    static void RecurseZip(byte[] head, int headRead, Stream source, Stream target, long sourceLength, ChangeRecorder? recorder, string entryName)
     {
-        var head = new byte[4];
-        var read = ReadUpTo(source, head, 4);
-
-        if (LooksLikeZip(head, read))
-        {
-            // The whole entry (head + remainder) is buffered for the recursive
-            // Convert. Its uncompressed size is known from the central directory,
-            // so presize the buffer to avoid MemoryStream's grow-and-copy churn.
-            using var buffer = new MemoryStream(InitialCapacity(sourceLength));
-            buffer.Write(head, 0, read);
-            source.CopyTo(buffer);
-            buffer.Position = 0;
-            using var normalized = Convert(buffer, null);
-            // Both halves are already resident, so the comparison is the cheap part here. The nested
-            // package's own changes are not reported individually: the outer entry is the part of
-            // this package that differs.
-            RecordIfDifferent(buffer, normalized, recorder, entryName);
-            normalized.CopyTo(target);
-            return;
-        }
-
-        if (read > 0)
-        {
-            target.Write(head, 0, read);
-        }
-
-        source.CopyTo(target);
+        // The whole entry (head + remainder) is buffered for the recursive
+        // Convert. Its uncompressed size is known from the central directory,
+        // so presize the buffer to avoid MemoryStream's grow-and-copy churn.
+        using var buffer = new MemoryStream(InitialCapacity(sourceLength));
+        buffer.Write(head, 0, headRead);
+        source.CopyTo(buffer);
+        buffer.Position = 0;
+        using var normalized = Convert(buffer, null);
+        // Both halves are already resident, so the comparison is the cheap part here. The nested
+        // package's own changes are not reported individually: the outer entry is the part of
+        // this package that differs.
+        RecordIfDifferent(buffer, normalized, recorder, entryName);
+        normalized.CopyTo(target);
     }
 
-    static async Task CopyOrRecurseZipAsync(Stream source, Stream target, long sourceLength, ChangeRecorder? recorder, string entryName, Cancel cancel)
+    static async Task RecurseZipAsync(byte[] head, int headRead, Stream source, Stream target, long sourceLength, ChangeRecorder? recorder, string entryName, Cancel cancel)
     {
-        var head = new byte[4];
-        var read = await ReadUpToAsync(source, head, 4, cancel);
-
-        if (LooksLikeZip(head, read))
-        {
-            // See CopyOrRecurseZip: presize the recursion buffer to the entry's
-            // known uncompressed size to avoid grow-and-copy reallocations.
-            using var buffer = new MemoryStream(InitialCapacity(sourceLength));
-            await buffer.WriteAsync(head, 0, read, cancel);
-            await source.CopyToAsync(buffer, cancel);
-            buffer.Position = 0;
-            using var normalized = await ConvertAsync(buffer, null, cancel);
-            RecordIfDifferent(buffer, normalized, recorder, entryName);
-            await normalized.CopyToAsync(target, cancel);
-            return;
-        }
-
-        if (read > 0)
-        {
-            await target.WriteAsync(head, 0, read, cancel);
-        }
-
-        await source.CopyToAsync(target, cancel);
+        // See RecurseZip: presize the recursion buffer to the entry's
+        // known uncompressed size to avoid grow-and-copy reallocations.
+        using var buffer = new MemoryStream(InitialCapacity(sourceLength));
+        await buffer.WriteAsync(head, 0, headRead, cancel);
+        await source.CopyToAsync(buffer, cancel);
+        buffer.Position = 0;
+        using var normalized = await ConvertAsync(buffer, null, cancel);
+        RecordIfDifferent(buffer, normalized, recorder, entryName);
+        await normalized.CopyToAsync(target, cancel);
     }
+
+    // The deflater (zlib-ng on modern .NET) does not produce the same output for the same bytes
+    // when they arrive in different-sized writes. A plain source.CopyTo(target) forwards whatever
+    // read sizes the source's inflate stream yields, and those depend on how the source entry was
+    // compressed — so the output was a function of the previous output, and a large media entry
+    // could flip between two forms on every conversion and never settle.
+    // https://github.com/SimonCropp/Determinize/issues/21
+    //
+    // Filling a fixed-size buffer before each write makes the write pattern, and so the compressed
+    // output, a function of the content alone.
+    const int copyChunkSize = 81920;
+
+    static void CopyInFixedChunks(byte[] head, int headRead, Stream source, Stream target)
+    {
+        var buffer = new byte[copyChunkSize];
+        Array.Copy(head, buffer, headRead);
+        var filled = headRead;
+        while (true)
+        {
+            filled += ReadUpTo(source, buffer, filled, copyChunkSize - filled);
+            if (filled > 0)
+            {
+                target.Write(buffer, 0, filled);
+            }
+
+            if (filled < copyChunkSize)
+            {
+                return;
+            }
+
+            filled = 0;
+        }
+    }
+
+    static async Task CopyInFixedChunksAsync(byte[] head, int headRead, Stream source, Stream target, Cancel cancel)
+    {
+        var buffer = new byte[copyChunkSize];
+        Array.Copy(head, buffer, headRead);
+        var filled = headRead;
+        while (true)
+        {
+            filled += await source.ReadAtLeastAsync(buffer.AsMemory(filled), copyChunkSize - filled, throwOnEndOfStream: false, cancel);
+            if (filled > 0)
+            {
+                await target.WriteAsync(buffer, 0, filled, cancel);
+            }
+
+            if (filled < copyChunkSize)
+            {
+                return;
+            }
+
+            filled = 0;
+        }
+    }
+
+    static int ReadUpTo(Stream source, byte[] buffer, int offset, int count) =>
+        source.ReadAtLeast(buffer.AsSpan(offset, count), count, throwOnEndOfStream: false);
 
     static void RecordIfDifferent(MemoryStream before, MemoryStream after, ChangeRecorder? recorder, string entryName)
     {

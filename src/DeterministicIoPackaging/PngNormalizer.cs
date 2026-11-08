@@ -1,12 +1,42 @@
 static class PngNormalizer
 {
     static byte[] pngSignature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+
+    public static byte[] Signature => pngSignature;
     static byte[] idatType = "IDAT"u8.ToArray();
+
+    public static bool IsPng(byte[] head, int length) =>
+        length >= pngSignature.Length &&
+        head.AsSpan(0, pngSignature.Length).SequenceEqual(pngSignature);
 
     public static void Normalize(Stream source, Stream target)
     {
         var header = new byte[8];
         source.ReadExactly(header, 0, 8);
+        ThrowIfNotPng(header);
+        NormalizeAfterSignature(source, target);
+    }
+
+    public static async Task NormalizeAsync(Stream source, Stream target, Cancel cancel)
+    {
+        var header = new byte[8];
+        await source.ReadExactlyAsync(header, 0, 8, cancel);
+        ThrowIfNotPng(header);
+        await NormalizeAfterSignatureAsync(source, target, cancel);
+    }
+
+    static void ThrowIfNotPng(byte[] header)
+    {
+        if (!IsPng(header, header.Length))
+        {
+            throw new InvalidDataException("Not a PNG: the PNG signature is missing.");
+        }
+    }
+
+    // For a caller that has already read and checked the 8-byte signature.
+    public static void NormalizeAfterSignature(Stream source, Stream target)
+    {
+        var header = new byte[8];
         target.Write(pngSignature);
 
         using var idatData = new MemoryStream();
@@ -27,10 +57,10 @@ static class PngNormalizer
         }
     }
 
-    public static async Task NormalizeAsync(Stream source, Stream target, Cancel cancel)
+    /// <inheritdoc cref="NormalizeAfterSignature"/>
+    public static async Task NormalizeAfterSignatureAsync(Stream source, Stream target, Cancel cancel)
     {
         var header = new byte[8];
-        await source.ReadExactlyAsync(header, 0, 8, cancel);
         target.Write(pngSignature);
 
         using var idatData = new MemoryStream();
