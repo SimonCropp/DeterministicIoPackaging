@@ -5,12 +5,8 @@ static class RelationshipRenumber
     // and Aspose's Iso29500_2008_Strict emit r:id/r:embed/r:link in this namespace; without matching
     // it, RemapIds would leave those references pointing at the pre-renumber ids (dangling).
     static XNamespace rStrict = "http://purl.oclc.org/ooxml/officeDocument/relationships";
-    static XName rId = r + "id";
-    static XName rEmbed = r + "embed";
-    static XName rLink = r + "link";
-    static XName rIdStrict = rStrict + "id";
-    static XName rEmbedStrict = rStrict + "embed";
-    static XName rLinkStrict = rStrict + "link";
+    // VML's own attribute for a relationship id (v:imagedata, v:fill), beside r:id.
+    static XName oRelId = XNamespace.Get("urn:schemas-microsoft-com:office:office") + "relid";
 
     public static Dictionary<string, string> RenumberAndSort(XDocument xml, string? entryName = null)
     {
@@ -82,29 +78,32 @@ static class RelationshipRenumber
         }
     }
 
+    // Every attribute the relationships namespace defines is a relationship id: not only r:id,
+    // r:embed and r:link, but SmartArt's r:dm/r:lo/r:qs/r:cs on dgm:relIds, and VML's r:pict and
+    // r:href on v:imagedata. So match on the namespace rather than a list of names, which left the
+    // ones not listed pointing at ids the renumbering had replaced.
     public static void RemapIds(XDocument xml, Dictionary<string, string> mapping)
     {
-        // Walk attributes via the linked-list once per element rather than
-        // calling element.Attribute(name) three times — each Attribute() call
-        // re-walks the linked list, so three lookups per descendant is roughly
-        // 3x the work. XName equality is a fast reference compare because
-        // XNames are interned.
+        // Walk attributes via the linked-list once per element. XNamespace and XName equality are
+        // fast reference compares because both are interned.
         foreach (var descendant in xml.Descendants())
         {
             for (var attr = descendant.FirstAttribute; attr != null; attr = attr.NextAttribute)
             {
-                var name = attr.Name;
-                if ((name == rId ||
-                     name == rEmbed ||
-                     name == rLink ||
-                     name == rIdStrict ||
-                     name == rEmbedStrict ||
-                     name == rLinkStrict) &&
+                if (IsRelationshipId(attr.Name) &&
                     mapping.TryGetValue(attr.Value, out var newId))
                 {
                     attr.SetValue(newId);
                 }
             }
         }
+    }
+
+    static bool IsRelationshipId(XName name)
+    {
+        var ns = name.Namespace;
+        return ns == r ||
+               ns == rStrict ||
+               name == oRelId;
     }
 }
