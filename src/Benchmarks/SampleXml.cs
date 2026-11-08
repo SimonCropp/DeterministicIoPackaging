@@ -1,5 +1,3 @@
-using System.Buffers.Binary;
-
 static class SampleXml
 {
     static XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";

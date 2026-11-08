@@ -1,4 +1,10 @@
+global using System.Buffers.Binary;
 global using System.IO.Compression;
 global using System.Xml.Linq;
 global using BenchmarkDotNet.Attributes;
+global using BenchmarkDotNet.Configs;
+global using BenchmarkDotNet.Exporters;
+global using BenchmarkDotNet.Loggers;
+global using BenchmarkDotNet.Reports;
+global using BenchmarkDotNet.Running;
 global using DeterministicIoPackaging;

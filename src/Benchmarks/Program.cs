@@ -1,9 +1,3 @@
-using BenchmarkDotNet.Configs;
-using BenchmarkDotNet.Exporters;
-using BenchmarkDotNet.Loggers;
-using BenchmarkDotNet.Reports;
-using BenchmarkDotNet.Running;
-
 var config = ManualConfig.CreateMinimumViable()
     .AddExporter(MarkdownExporter.GitHub)
     .AddLogger(ConsoleLogger.Default)
