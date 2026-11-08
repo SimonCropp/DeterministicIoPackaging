@@ -71,6 +71,60 @@ public class NumberingPatcherTests
         }
     }
 
+    // word/_rels/numbering.xml.rels is renumbered with the other Word part rels, so the r:id of a
+    // picture bullet's image has to be remapped to match.
+    [Test]
+    public async Task PictureBulletRelationshipIdFollowsRenumbering()
+    {
+        const string rels =
+            """
+            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                <Relationship Id="rId9" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image1.png" />
+            </Relationships>
+            """;
+        const string numbering =
+            """
+            <w:numbering
+                xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+                xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+                xmlns:v="urn:schemas-microsoft-com:vml">
+                <w:numPicBullet w:numPicBulletId="0">
+                    <w:pict><v:shape><v:imagedata r:id="rId9" /></v:shape></w:pict>
+                </w:numPicBullet>
+                <w:abstractNum w:abstractNumId="0"><w:lvl w:ilvl="0"><w:lvlPicBulletId w:val="0" /></w:lvl></w:abstractNum>
+                <w:num w:numId="1"><w:abstractNumId w:val="0" /></w:num>
+            </w:numbering>
+            """;
+
+        using var source = new MemoryStream();
+        using (var archive = new Archive(source, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            Add(archive, "word/_rels/numbering.xml.rels", rels);
+            Add(archive, "word/numbering.xml", numbering);
+        }
+
+        using var result = DeterministicPackage.Convert(source);
+        using var resultArchive = new Archive(result, ZipArchiveMode.Read, leaveOpen: true);
+
+        var relationshipId = Load(resultArchive, "word/_rels/numbering.xml.rels").Root!.Elements().Single().Attribute("Id")!.Value;
+        XNamespace r = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+        var reference = Load(resultArchive, "word/numbering.xml").Descendants().Attributes(r + "id").Single().Value;
+
+        await Assert.That(reference).IsEqualTo(relationshipId);
+    }
+
+    static void Add(Archive archive, string name, string content)
+    {
+        using var writer = new StreamWriter(archive.CreateEntry(name).Open());
+        writer.Write(content);
+    }
+
+    static XDocument Load(Archive archive, string name)
+    {
+        using var stream = archive.GetEntry(name)!.Open();
+        return XDocument.Load(stream);
+    }
+
     // abstractNum elements are ordered by their serialized content to assign a
     // deterministic abstractNumId. That sort must use Ordinal (byte) order, not
     // the current culture's linguistic rules — otherwise the id assignment, and
