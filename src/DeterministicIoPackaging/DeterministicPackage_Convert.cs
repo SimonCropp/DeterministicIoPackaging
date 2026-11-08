@@ -174,6 +174,12 @@ public static partial class DeterministicPackage
         buffer.Write(head, 0, headRead);
         source.CopyTo(buffer);
         buffer.Position = 0;
+        if (!IsReadableZip(buffer))
+        {
+            CopyInFixedChunks([], 0, buffer, target);
+            return;
+        }
+
         using var normalized = Convert(buffer, null);
         // Both halves are already resident, so the comparison is the cheap part here. The nested
         // package's own changes are not reported individually: the outer entry is the part of
@@ -190,9 +196,38 @@ public static partial class DeterministicPackage
         await buffer.WriteAsync(head, 0, headRead, cancel);
         await source.CopyToAsync(buffer, cancel);
         buffer.Position = 0;
+        if (!IsReadableZip(buffer))
+        {
+            await CopyInFixedChunksAsync([], 0, buffer, target, cancel);
+            return;
+        }
+
         using var normalized = await ConvertAsync(buffer, null, cancel);
         RecordIfDifferent(buffer, normalized, recorder, entryName);
         await normalized.CopyToAsync(target, cancel);
+    }
+
+    // Four bytes of ZIP signature do not make a ZIP: a binary entry can start with "PK\x03\x04" by
+    // chance, or be a truncated or damaged archive. Such an entry is copied through unchanged, as a
+    // JPEG named .png is, instead of failing the whole conversion. Only the archive structure is
+    // checked here: a nested package that opens but has a part that fails to convert still fails,
+    // since that is a real problem with the package.
+    static bool IsReadableZip(MemoryStream buffer)
+    {
+        try
+        {
+            using var archive = new Archive(buffer, ZipArchiveMode.Read, leaveOpen: true);
+            _ = archive.Entries.Count;
+            return true;
+        }
+        catch (InvalidDataException)
+        {
+            return false;
+        }
+        finally
+        {
+            buffer.Position = 0;
+        }
     }
 
     // The deflater (zlib-ng on modern .NET) does not produce the same output for the same bytes
