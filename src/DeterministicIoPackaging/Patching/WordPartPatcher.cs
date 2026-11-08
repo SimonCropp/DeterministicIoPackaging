@@ -21,12 +21,28 @@ class WordPartPatcher(WordPartRelationshipPatcher relsPatcher, WordIdNumbering i
                name.EndsWith(".xml");
     }
 
+    CommentParagraphIds commentParagraphIds = new();
+
     public void PatchXml(XDocument xml, string entryName)
     {
         var root = xml.Root;
         if (root != null)
         {
-            idNumbering.Apply(root);
+            if (CommentParagraphIds.IsComments(entryName))
+            {
+                var paragraphs = CommentParagraphIds.Collect(root);
+                idNumbering.Apply(root);
+                commentParagraphIds.Renumber(paragraphs);
+            }
+            else
+            {
+                idNumbering.Apply(root);
+            }
+
+            if (CommentParagraphIds.RefersToComments(entryName))
+            {
+                commentParagraphIds.Remap(root);
+            }
         }
 
         ProtectionHashes.Scrub(xml);

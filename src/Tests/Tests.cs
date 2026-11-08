@@ -54,17 +54,19 @@ public class Tests
         await Assert.That(bytes1).IsEquivalentTo(bytes2, CollectionOrdering.Matching);
     }
 
+    // Converting the output again changes nothing. This used to compare against a copy of the
+    // document already converted by an older version, whose numbering part had lost its root
+    // namespace declarations: the two only matched because every conversion stripped them.
     [Test]
     public async Task NumberingBinaryEquality2()
     {
-        var file1 = Path.Combine(directory, "samples.numbering2_1.docx");
-        var file2 = Path.Combine(directory, "samples.numbering2_2.docx");
+        var file = Path.Combine(directory, "samples.numbering2_2.docx");
 
-        using var stream1 = Convert(file1);
-        using var stream2 = Convert(file2);
+        using var first = Convert(file);
+        using var second = DeterministicPackage.Convert(first);
 
-        var bytes1 = stream1.ToArray();
-        var bytes2 = stream2.ToArray();
+        var bytes1 = first.ToArray();
+        var bytes2 = second.ToArray();
 
         await Assert.That(bytes1).IsEquivalentTo(bytes2, CollectionOrdering.Matching);
     }

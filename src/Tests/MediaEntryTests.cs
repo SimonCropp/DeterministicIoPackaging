@@ -36,6 +36,35 @@ public class MediaEntryTests
         await Assert.That(changes).IsEmpty();
     }
 
+    // An entry that starts with a ZIP signature but is not a readable archive (a damaged or
+    // truncated embedding, or a binary that starts with "PK\x03\x04" by chance) passes through
+    // rather than failing the conversion with "Central Directory corrupt".
+    static byte[] notAZip = [0x50, 0x4B, 0x03, 0x04, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+    [Test]
+    public async Task UnreadableNestedZipPassesThrough()
+    {
+        using var source = BuildZip(("word/embeddings/oleObject1.bin", notAZip));
+
+        using var result = DeterministicPackage.Convert(source, out var changes);
+
+        using (Assert.Multiple())
+        {
+            await Assert.That(ReadEntry(result, "word/embeddings/oleObject1.bin")).IsEquivalentTo(notAZip, CollectionOrdering.Matching);
+            await Assert.That(changes).IsEmpty();
+        }
+    }
+
+    [Test]
+    public async Task UnreadableNestedZipPassesThroughAsync()
+    {
+        using var source = BuildZip(("word/embeddings/oleObject1.bin", notAZip));
+
+        using var result = await DeterministicPackage.ConvertAsync(source);
+
+        await Assert.That(ReadEntry(result, "word/embeddings/oleObject1.bin")).IsEquivalentTo(notAZip, CollectionOrdering.Matching);
+    }
+
     [Test]
     public async Task FailureNamesTheEntry()
     {

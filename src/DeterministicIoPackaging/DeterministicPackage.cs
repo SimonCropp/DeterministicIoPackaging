@@ -29,7 +29,7 @@ public static partial class DeterministicPackage
             new WordPartPatcher(wordPartRelsPatcher, wordIdNumbering),
             pptxRelsPatcher,
             new PptxContentPatcher(pptxRelsPatcher),
-            new NumberingPatcher()
+            new NumberingPatcher(wordPartRelsPatcher)
         ];
         return new(patchers);
     }
@@ -46,11 +46,99 @@ public static partial class DeterministicPackage
         return new(source, ZipArchiveMode.Read, leaveOpen: true);
     }
 
-    static void DuplicateEntry(Entry sourceEntry, Archive targetArchive, PatcherSet currentPatchers, ChangeRecorder? recorder)
+    // A content part's relationship ids are remapped from what renumbering its .rels part produced,
+    // so every .rels part has to be patched before any content part. Writing in ordinal name order
+    // does not ensure that: "_" sorts after upper-case letters and digits, so word/Footer1.xml came
+    // before word/_rels/Footer1.xml.rels and kept ids the renumbering had replaced. So .rels parts
+    // are patched up front and held until their turn to be written. They are small.
+    static Dictionary<Entry, PatchedPart> PatchRelationshipParts(List<Entry> ordered, PatcherSet patchers, ChangeRecorder? recorder)
+    {
+        var patched = new Dictionary<Entry, PatchedPart>();
+        foreach (var entry in ordered)
+        {
+            if (!IsRelationshipPart(entry))
+            {
+                continue;
+            }
+
+            var patcher = patchers.Find(entry);
+            if (patcher == null)
+            {
+                continue;
+            }
+
+            try
+            {
+                using var stream = entry.Open();
+                var xml = LoadXml(stream);
+                var before = Snapshot(xml, recorder);
+                patcher.PatchXml(xml, entry.FullName);
+                patched.Add(entry, new(xml, before));
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                throw EntryFailed(entry, exception);
+            }
+        }
+
+        return patched;
+    }
+
+    /// <inheritdoc cref="PatchRelationshipParts"/>
+    static async Task<Dictionary<Entry, PatchedPart>> PatchRelationshipPartsAsync(List<Entry> ordered, PatcherSet patchers, ChangeRecorder? recorder, Cancel cancel)
+    {
+        var patched = new Dictionary<Entry, PatchedPart>();
+        foreach (var entry in ordered)
+        {
+            if (!IsRelationshipPart(entry))
+            {
+                continue;
+            }
+
+            var patcher = patchers.Find(entry);
+            if (patcher == null)
+            {
+                continue;
+            }
+
+            try
+            {
+                using var stream = await entry.OpenAsync(cancel);
+                var xml = await LoadXmlAsync(stream, cancel);
+                var before = Snapshot(xml, recorder);
+                patcher.PatchXml(xml, entry.FullName);
+                patched.Add(entry, new(xml, before));
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                throw EntryFailed(entry, exception);
+            }
+        }
+
+        return patched;
+    }
+
+    static bool IsRelationshipPart(Entry entry) =>
+        !IsSkippedEntry(entry) &&
+        entry.FullName.EndsWith(".rels", StringComparison.OrdinalIgnoreCase);
+
+    // A part patched ahead of its turn, with its snapshot from before patching (null when no
+    // report was asked for) so the change is still recorded in write order.
+    record PatchedPart(XDocument Xml, string? Before);
+
+    static void DuplicateEntry(Entry sourceEntry, Archive targetArchive, PatcherSet currentPatchers, Dictionary<Entry, PatchedPart> patchedParts, ChangeRecorder? recorder)
     {
         if (IsSkippedEntry(sourceEntry))
         {
             recorder?.Record(ConvertChangeKind.Removed, sourceEntry.FullName);
+            return;
+        }
+
+        if (patchedParts.TryGetValue(sourceEntry, out var part))
+        {
+            using var patchedStream = CreateEntry(sourceEntry, targetArchive).Open();
+            RecordIfPatched(part.Before, part.Xml, recorder, sourceEntry.FullName);
+            SaveXml(part.Xml, patchedStream);
             return;
         }
 
@@ -164,12 +252,20 @@ public static partial class DeterministicPackage
         after.CopyTo(targetStream);
     }
 
-    static async Task DuplicateEntryAsync(Entry sourceEntry, Archive targetArchive, PatcherSet currentPatchers, ChangeRecorder? recorder, Cancel cancel)
+    static async Task DuplicateEntryAsync(Entry sourceEntry, Archive targetArchive, PatcherSet currentPatchers, Dictionary<Entry, PatchedPart> patchedParts, ChangeRecorder? recorder, Cancel cancel)
     {
         var name = sourceEntry.FullName;
         if (IsSkippedEntry(sourceEntry))
         {
             recorder?.Record(ConvertChangeKind.Removed, name);
+            return;
+        }
+
+        if (patchedParts.TryGetValue(sourceEntry, out var part))
+        {
+            using var patchedStream = await CreateEntry(sourceEntry, targetArchive).OpenAsync(cancel);
+            RecordIfPatched(part.Before, part.Xml, recorder, name);
+            await SaveXml(part.Xml, patchedStream, cancel);
             return;
         }
 

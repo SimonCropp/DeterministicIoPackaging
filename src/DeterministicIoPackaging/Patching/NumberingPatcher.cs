@@ -1,5 +1,13 @@
-class NumberingPatcher : IExactMatchPatcher
+// Takes the WordPartRelationshipPatcher because word/_rels/numbering.xml.rels is one of the parts it
+// renumbers: picture bullets (w:numPicBullet) reference their images by r:id, and those ids have to
+// follow the renumbering.
+class NumberingPatcher(WordPartRelationshipPatcher relsPatcher) : IExactMatchPatcher
 {
+    public NumberingPatcher() :
+        this(new())
+    {
+    }
+
     public string ExactMatch => "word/numbering.xml";
 
     static XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
@@ -69,9 +77,7 @@ class NumberingPatcher : IExactMatchPatcher
             }
         }
 
-        // Replace abstractNum elements with sorted ones
-        var nums = root.Elements(num).ToList();
-        root.ReplaceAll(sortedAbstractNums.Concat(nums));
+        PutBackInOrder(root, abstractNums, sortedAbstractNums);
 
         // Update references in num elements
         foreach (var numElement in root.Elements(num))
@@ -90,6 +96,39 @@ class NumberingPatcher : IExactMatchPatcher
             }
 
             abstractNumIdElement.Attribute(val)!.Value = newId;
+        }
+
+        if (relsPatcher.IdMappings.TryGetValue(entryName, out var mapping) &&
+            mapping.Count > 0)
+        {
+            RelationshipRenumber.RemapIds(xml, mapping);
+        }
+    }
+
+    // Moves the abstractNums into sorted order where they stood, and touches nothing else. The
+    // part holds more than abstractNums and nums: w:numPicBullet (the picture bullets the
+    // abstractNums point at) comes before them, w:numIdMacAtCleanup after, and the root carries
+    // the namespace declarations and mc:Ignorable. ReplaceAll would have removed all of that.
+    static void PutBackInOrder(XElement root, List<XElement> abstractNums, List<XElement> sorted)
+    {
+        if (abstractNums.Count == 0)
+        {
+            return;
+        }
+
+        var anchor = abstractNums[0].PreviousNode;
+        foreach (var element in abstractNums)
+        {
+            element.Remove();
+        }
+
+        if (anchor == null)
+        {
+            root.AddFirst(sorted);
+        }
+        else
+        {
+            anchor.AddAfterSelf(sorted);
         }
     }
 
