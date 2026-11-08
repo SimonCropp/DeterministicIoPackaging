@@ -62,6 +62,14 @@ static class RelationshipRenumber
                 continue;
             }
 
+            // An external target is a URI outside the package, such as a hyperlink to
+            // "/docs/notes.pdf" on the same server. It is not a part name, so stripping its
+            // leading "/" changed where it pointed.
+            if (string.Equals((string?) element.Attribute("TargetMode"), "External", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
             var target = targetAttr.Value;
             if (!target.StartsWith('/'))
             {

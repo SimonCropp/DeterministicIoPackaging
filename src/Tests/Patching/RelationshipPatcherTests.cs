@@ -18,6 +18,36 @@ public class RelationshipPatcherTests
         return Verify(document);
     }
 
+    // An external target is a URI, not a part name, so an absolute one stays as it is.
+    [Test]
+    public async Task ExternalAbsoluteTargetIsUntouched()
+    {
+        var xml =
+            """
+            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+              <Relationship
+                Id="R1"
+                Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"
+                Target="/word/notes.pdf"
+                TargetMode="External"/>
+              <Relationship
+                Id="R2"
+                Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"
+                Target="/word/media/image1.png"/>
+            </Relationships>
+            """;
+        var document = XDocument.Parse(xml);
+        new DocumentRelationshipPatcher().PatchXml(document, "word/_rels/document.xml.rels");
+
+        var targets = document.Root!.Elements().ToDictionary(_ => (string) _.Attribute("Type")!, _ => (string) _.Attribute("Target")!);
+        using (Assert.Multiple())
+        {
+            await Assert.That(targets["http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"]).IsEqualTo("/word/notes.pdf");
+            // An internal absolute target is still made relative.
+            await Assert.That(targets["http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"]).IsEqualTo("media/image1.png");
+        }
+    }
+
     [Test]
     public Task Patch()
     {
