@@ -49,6 +49,9 @@ class ContentTypesPatcher(IReadOnlyCollection<string> partNames) :
         var defaults = ReadDefaults(root);
         var overrides = ReadOverrides(root);
 
+        var newDefaults = new List<XElement>();
+        var newOverrides = new List<XElement>();
+
         // Group each part by its extension, tracking its effective content type,
         // so every extension can be assigned a single canonical Default below.
         var byExtension = new Dictionary<string, List<PartContentType>>(StringComparer.Ordinal);
@@ -57,6 +60,14 @@ class ContentTypesPatcher(IReadOnlyCollection<string> partNames) :
             var extension = Extension(partName);
             if (extension.Length == 0)
             {
+                // No Default can cover a part without an extension, so an Override is the only
+                // way it has a content type (NuGet writes one for a LICENSE file, for example).
+                // Keep it as it was.
+                if (overrides.TryGetValue(partName, out var overridden))
+                {
+                    newOverrides.Add(Override(partName, overridden));
+                }
+
                 continue;
             }
 
@@ -77,8 +88,6 @@ class ContentTypesPatcher(IReadOnlyCollection<string> partNames) :
             parts.Add(new(partName, contentType));
         }
 
-        var newDefaults = new List<XElement>();
-        var newOverrides = new List<XElement>();
         foreach (var (extension, parts) in byExtension)
         {
             var canonicalDefault = ChooseDefault(parts);
@@ -91,10 +100,7 @@ class ContentTypesPatcher(IReadOnlyCollection<string> partNames) :
             {
                 if (!string.Equals(part.ContentType, canonicalDefault, StringComparison.Ordinal))
                 {
-                    newOverrides.Add(
-                        new(overrideName,
-                            new XAttribute("PartName", part.PartName),
-                            new XAttribute("ContentType", part.ContentType)));
+                    newOverrides.Add(Override(part.PartName, part.ContentType));
                 }
             }
         }
@@ -108,6 +114,11 @@ class ContentTypesPatcher(IReadOnlyCollection<string> partNames) :
 
         root.ReplaceAll(ordered);
     }
+
+    static XElement Override(string partName, string contentType) =>
+        new(overrideName,
+            new XAttribute("PartName", partName),
+            new XAttribute("ContentType", contentType));
 
     // The content type shared by the most parts wins the extension's Default;
     // the lexicographically-smallest content type (Ordinal) breaks ties. Both

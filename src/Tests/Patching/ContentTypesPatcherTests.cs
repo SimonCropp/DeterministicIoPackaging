@@ -72,6 +72,25 @@ public class ContentTypesPatcherTests
         }
     }
 
+    // A part without an extension can only get a content type from an Override, which has to
+    // survive. NuGet writes one for a LICENSE file.
+    [Test]
+    public async Task ExtensionlessPartKeepsItsOverride()
+    {
+        const string xml =
+            """
+            <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+              <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml" />
+              <Override PartName="/LICENSE" ContentType="application/octet" />
+            </Types>
+            """;
+
+        var patched = PatchHelper
+            .Patch(new ContentTypesPatcher(["/_rels/.rels", "/LICENSE"]), xml, "[Content_Types].xml");
+
+        await Assert.That(Resolve(patched, "/LICENSE")).IsEqualTo("application/octet");
+    }
+
     // Resolves a part's content type the way an OPC reader would: an Override for
     // that exact part wins, otherwise the Default for its extension.
     static string? Resolve(XDocument contentTypes, string partName)
