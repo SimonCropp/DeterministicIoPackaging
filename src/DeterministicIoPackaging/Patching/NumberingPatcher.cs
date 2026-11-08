@@ -1,5 +1,13 @@
-class NumberingPatcher : IExactMatchPatcher
+// Takes the WordPartRelationshipPatcher because word/_rels/numbering.xml.rels is one of the parts it
+// renumbers: picture bullets (w:numPicBullet) reference their images by r:id, and those ids have to
+// follow the renumbering.
+class NumberingPatcher(WordPartRelationshipPatcher relsPatcher) : IExactMatchPatcher
 {
+    public NumberingPatcher() :
+        this(new())
+    {
+    }
+
     public string ExactMatch => "word/numbering.xml";
 
     static XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
@@ -88,6 +96,12 @@ class NumberingPatcher : IExactMatchPatcher
             }
 
             abstractNumIdElement.Attribute(val)!.Value = newId;
+        }
+
+        if (relsPatcher.IdMappings.TryGetValue(entryName, out var mapping) &&
+            mapping.Count > 0)
+        {
+            RelationshipRenumber.RemapIds(xml, mapping);
         }
     }
 

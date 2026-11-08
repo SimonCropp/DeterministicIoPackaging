@@ -29,7 +29,7 @@ public static partial class DeterministicPackage
             new WordPartPatcher(wordPartRelsPatcher, wordIdNumbering),
             pptxRelsPatcher,
             new PptxContentPatcher(pptxRelsPatcher),
-            new NumberingPatcher()
+            new NumberingPatcher(wordPartRelsPatcher)
         ];
         return new(patchers);
     }
