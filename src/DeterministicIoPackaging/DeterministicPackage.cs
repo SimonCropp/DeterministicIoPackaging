@@ -69,12 +69,6 @@ public static partial class DeterministicPackage
             return;
         }
 
-        if (sourceEntry.FullName.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
-        {
-            NormalizePng(sourceStream, targetStream, recorder, sourceEntry.FullName);
-            return;
-        }
-
         if (IsSpreadsheetXml(sourceEntry))
         {
             var xml = XDocument.Load(sourceStream);
@@ -85,7 +79,31 @@ public static partial class DeterministicPackage
             return;
         }
 
-        CopyOrRecurseZip(sourceStream, targetStream, sourceEntry.Length, recorder, sourceEntry.FullName);
+        CopyBinary(sourceStream, targetStream, sourceEntry, recorder);
+    }
+
+    // Binary entries are sniffed by content rather than trusted by name: PowerPoint sometimes saves a
+    // JPEG under a .png name, and parsing that as PNG chunks reads the JFIF header as a ~1.2 GB chunk
+    // length. Only an entry that is both named .png and starts with the PNG signature is normalized.
+    static void CopyBinary(Stream source, Stream target, Entry entry, ChangeRecorder? recorder)
+    {
+        var head = new byte[headLength];
+        var read = ReadUpTo(source, head, headLength);
+
+        if (IsPngName(entry) &&
+            PngNormalizer.IsPng(head, read))
+        {
+            NormalizePng(source, target, recorder, entry.FullName);
+            return;
+        }
+
+        if (LooksLikeZip(head, read))
+        {
+            RecurseZip(head, read, source, target, entry.Length, recorder, entry.FullName);
+            return;
+        }
+
+        CopyInFixedChunks(head, read, source, target);
     }
 
     // The part as loaded, serialized, so it can be compared against the part as patched. Only when a
@@ -123,15 +141,18 @@ public static partial class DeterministicPackage
     // PngNormalizer streams source to target, so the only way to know whether it changed anything is
     // to buffer the output and compare. Worth it only when a report was asked for; otherwise this
     // writes straight through as it always has.
+    //
+    // The caller has already read and checked the 8-byte signature from sourceStream.
     static void NormalizePng(Stream sourceStream, Stream targetStream, ChangeRecorder? recorder, string entryName)
     {
         if (recorder == null)
         {
-            PngNormalizer.Normalize(sourceStream, targetStream);
+            PngNormalizer.NormalizeAfterSignature(sourceStream, targetStream);
             return;
         }
 
         using var before = new MemoryStream();
+        before.Write(PngNormalizer.Signature, 0, PngNormalizer.Signature.Length);
         sourceStream.CopyTo(before);
         before.Position = 0;
 
@@ -167,12 +188,6 @@ public static partial class DeterministicPackage
             return;
         }
 
-        if (name.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
-        {
-            await NormalizePngAsync(sourceStream, targetStream, recorder, name, cancel);
-            return;
-        }
-
         if (IsSpreadsheetXml(sourceEntry))
         {
             var xml = await XDocument.LoadAsync(sourceStream, LoadOptions.None, cancel);
@@ -183,19 +198,48 @@ public static partial class DeterministicPackage
             return;
         }
 
-        await CopyOrRecurseZipAsync(sourceStream, targetStream, sourceEntry.Length, recorder, name, cancel);
+        await CopyBinaryAsync(sourceStream, targetStream, sourceEntry, recorder, cancel);
     }
+
+    /// <inheritdoc cref="CopyBinary"/>
+    static async Task CopyBinaryAsync(Stream source, Stream target, Entry entry, ChangeRecorder? recorder, Cancel cancel)
+    {
+        var head = new byte[headLength];
+        var read = await ReadUpToAsync(source, head, headLength, cancel);
+
+        if (IsPngName(entry) &&
+            PngNormalizer.IsPng(head, read))
+        {
+            await NormalizePngAsync(source, target, recorder, entry.FullName, cancel);
+            return;
+        }
+
+        if (LooksLikeZip(head, read))
+        {
+            await RecurseZipAsync(head, read, source, target, entry.Length, recorder, entry.FullName, cancel);
+            return;
+        }
+
+        await CopyInFixedChunksAsync(head, read, source, target, cancel);
+    }
+
+    // Enough for the 8-byte PNG signature, which also covers the 4-byte ZIP signatures.
+    const int headLength = 8;
+
+    static bool IsPngName(Entry entry) =>
+        entry.FullName.EndsWith(".png", StringComparison.OrdinalIgnoreCase);
 
     /// <inheritdoc cref="NormalizePng"/>
     static async Task NormalizePngAsync(Stream sourceStream, Stream targetStream, ChangeRecorder? recorder, string entryName, Cancel cancel)
     {
         if (recorder == null)
         {
-            await PngNormalizer.NormalizeAsync(sourceStream, targetStream, cancel);
+            await PngNormalizer.NormalizeAfterSignatureAsync(sourceStream, targetStream, cancel);
             return;
         }
 
         using var before = new MemoryStream();
+        before.Write(PngNormalizer.Signature, 0, PngNormalizer.Signature.Length);
         await sourceStream.CopyToAsync(before, cancel);
         before.Position = 0;
 
