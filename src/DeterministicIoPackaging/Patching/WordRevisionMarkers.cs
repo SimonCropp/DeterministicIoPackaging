@@ -3,7 +3,8 @@
 // Word and tools like Aspose.Words emit random IDs on every save for
 // change-tracking and cross-reference lookup. They have no semantic
 // meaning for document content and break deterministic output:
-//   - w14:paraId / w14:textId on <w:p> (random hex per paragraph save)
+//   - w14:paraId / w14:textId on <w:p> (random hex per paragraph save). The paraIds of
+//     word/comments.xml are put back renumbered afterward: see CommentParagraphIds
 //   - w:rsidR, w:rsidRPr, w:rsidP, w:rsidRDefault, w:rsidDel,
 //     w:rsidTr, w:rsidSect (revision save IDs on paragraphs, runs,
 //     table rows, section properties)

@@ -18,6 +18,7 @@ Word documents (.docx) contain multiple types of non-deterministic IDs that need
      - `a:` = `http://schemas.openxmlformats.org/drawingml/2006/main`
    - Renumbered by `WordIdNumbering`, one instance shared by `DocumentPatcher` and `WordPartPatcher`, so numbering continues across headers/footers/comments rather than restarting at 1 per part (duplicate `docPr` ids across parts can be treated as corruption by Word). Content control ids (`w:sdtPr/w:id`) are renumbered the same way
    - `wp14:anchorId` / `wp14:editId` on `wp:inline`/`wp:anchor` are random per save and are stripped by `WordRevisionMarkers`, along with `w:date` on tracked changes and comments
+   - `w14:paraId` is stripped everywhere except `word/comments.xml`, where `CommentParagraphIds` renumbers it and remaps `commentsExtended.xml` / `commentsIds.xml` to match. Those parts find a comment by its last paragraph's id, so stripping it there loses reply threads and resolved state
 
 2. **Numbering IDs** (in word/numbering.xml):
    - `w:nsid` - Numbering session ID (should be removed entirely)
