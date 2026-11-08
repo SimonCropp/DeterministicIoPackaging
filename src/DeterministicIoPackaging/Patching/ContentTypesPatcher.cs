@@ -166,7 +166,11 @@ class ContentTypesPatcher(IReadOnlyCollection<string> partNames) :
 
     static Dictionary<string, string> ReadOverrides(XElement root)
     {
-        var overrides = new Dictionary<string, string>(StringComparer.Ordinal);
+        // Part names are compared case-insensitively per the OPC spec, so an Override for
+        // "/word/Document.xml" belongs to the zip entry "word/document.xml". Matching them
+        // case-sensitively dropped the Override and left the part on its extension's Default.
+        // The Override written back uses the entry's own name.
+        var overrides = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var element in root.Elements(overrideName))
         {
             var partName = (string?) element.Attribute("PartName");
