@@ -427,11 +427,31 @@ public static partial class DeterministicPackage
         entry.FullName.StartsWith("xl/") &&
         entry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase);
 
-    static Task SaveXml(XDocument xml, Stream targetStream, Cancel cancel) =>
-        xml.SaveAsync(targetStream, SaveOptions.DisableFormatting, cancel);
+    // XDocument.Save and SaveAsync serialize the same bytes but hand them to the stream in
+    // different-sized writes, and the deflater's output depends on the write pattern (see
+    // CopyInFixedChunks). Writing straight into the entry made Convert and ConvertAsync produce
+    // different archives for the same input. Serializing to a buffer first, then writing it in
+    // fixed chunks, makes the compressed output a function of the content alone in both paths.
+    // The serialization is in memory, so the async path does it synchronously.
+    static async Task SaveXml(XDocument xml, Stream targetStream, Cancel cancel)
+    {
+        using var buffer = SerializeXml(xml);
+        await CopyInFixedChunksAsync([], 0, buffer, targetStream, cancel);
+    }
 
-    static void SaveXml(XDocument xml, Stream targetStream) =>
-        xml.Save(targetStream, SaveOptions.DisableFormatting);
+    static void SaveXml(XDocument xml, Stream targetStream)
+    {
+        using var buffer = SerializeXml(xml);
+        CopyInFixedChunks([], 0, buffer, targetStream);
+    }
+
+    static MemoryStream SerializeXml(XDocument xml)
+    {
+        var buffer = new MemoryStream();
+        xml.Save(buffer, SaveOptions.DisableFormatting);
+        buffer.Position = 0;
+        return buffer;
+    }
 
     // The OpenXml SDK may output spreadsheetml XML with a prefixed default namespace
     // (e.g. <x:worksheet xmlns:x="...">) instead of an unprefixed default namespace.
