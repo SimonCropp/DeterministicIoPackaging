@@ -9,6 +9,7 @@ public class MediaEntryTests
         var jpeg = BuildJpegLikeBytes();
         using var source = BuildZip(("ppt/media/image5.png", jpeg));
 
+        // ReSharper disable once MethodHasAsyncOverload
         using var result = DeterministicPackage.Convert(source);
 
         await Assert.That(ReadEntry(result, "ppt/media/image5.png")).IsEquivalentTo(jpeg, CollectionOrdering.Matching);
@@ -29,7 +30,7 @@ public class MediaEntryTests
     public async Task JpegNamedPngReportsNoChange()
     {
         using var source = BuildZip(("ppt/media/image5.png", BuildJpegLikeBytes()));
-        using var first = DeterministicPackage.Convert(source);
+        using var first = await DeterministicPackage.ConvertAsync(source);
 
         using var second = DeterministicPackage.Convert(first, out var changes);
 
@@ -87,8 +88,11 @@ public class MediaEntryTests
         var media = BuildNoisyMedia(3_000_000);
         using var source = BuildZip(("ppt/media/image13.tiff", media));
 
+        // ReSharper disable once MethodHasAsyncOverload
         using var first = DeterministicPackage.Convert(source);
+        // ReSharper disable once MethodHasAsyncOverload
         using var second = DeterministicPackage.Convert(first);
+        // ReSharper disable once MethodHasAsyncOverload
         using var third = DeterministicPackage.Convert(second);
 
         await Assert.That(second.ToArray()).IsEquivalentTo(first.ToArray(), CollectionOrdering.Matching);
@@ -118,9 +122,9 @@ public class MediaEntryTests
         using var optimal = BuildZip(CompressionLevel.Optimal, ("ppt/media/image13.tiff", media));
         using var stored = BuildZip(CompressionLevel.NoCompression, ("ppt/media/image13.tiff", media));
 
-        using var fromFastest = DeterministicPackage.Convert(fastest);
-        using var fromOptimal = DeterministicPackage.Convert(optimal);
-        using var fromStored = DeterministicPackage.Convert(stored);
+        using var fromFastest = await DeterministicPackage.ConvertAsync(fastest);
+        using var fromOptimal = await DeterministicPackage.ConvertAsync(optimal);
+        using var fromStored = await DeterministicPackage.ConvertAsync(stored);
 
         await Assert.That(fromOptimal.ToArray()).IsEquivalentTo(fromFastest.ToArray(), CollectionOrdering.Matching);
         await Assert.That(fromStored.ToArray()).IsEquivalentTo(fromFastest.ToArray(), CollectionOrdering.Matching);

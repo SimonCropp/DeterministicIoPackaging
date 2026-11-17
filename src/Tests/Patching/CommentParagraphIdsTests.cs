@@ -46,7 +46,7 @@ public class CommentParagraphIdsTests
     public async Task RepliesStayThreaded()
     {
         using var source = BuildPackage("1A2B3C4D", "5E6F7A0B");
-        using var result = DeterministicPackage.Convert(source);
+        using var result = await DeterministicPackage.ConvertAsync(source);
         using var archive = new Archive(result, ZipArchiveMode.Read, leaveOpen: true);
 
         var paragraphIds = Load(archive, "word/comments.xml").Descendants().Attributes(w14 + "paraId").Select(_ => _.Value).ToList();
@@ -71,8 +71,8 @@ public class CommentParagraphIdsTests
     {
         using var firstSource = BuildPackage("1A2B3C4D", "5E6F7A0B");
         using var secondSource = BuildPackage("0F0E0D0C", "7B6A5948");
-        using var first = DeterministicPackage.Convert(firstSource);
-        using var second = DeterministicPackage.Convert(secondSource);
+        using var first = await DeterministicPackage.ConvertAsync(firstSource);
+        using var second = await DeterministicPackage.ConvertAsync(secondSource);
 
         await Assert.That(first.ToArray()).IsEquivalentTo(second.ToArray(), CollectionOrdering.Matching);
     }

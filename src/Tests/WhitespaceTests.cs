@@ -24,6 +24,7 @@ public class WhitespaceTests
     {
         using var source = BuildZip((slideName, slide), slideRels);
 
+        // ReSharper disable once MethodHasAsyncOverload
         using var result = DeterministicPackage.Convert(source);
 
         await Assert.That(ReadEntry(result, slideName)).Contains("<a:t> </a:t>");
@@ -48,7 +49,7 @@ public class WhitespaceTests
             """;
         using var source = BuildZip(("xl/sharedStrings.xml", sharedStrings));
 
-        using var result = DeterministicPackage.Convert(source);
+        using var result = await DeterministicPackage.ConvertAsync(source);
 
         await Assert.That(ReadEntry(result, "xl/sharedStrings.xml")).Contains("<t> </t>");
     }
@@ -57,7 +58,7 @@ public class WhitespaceTests
     public async Task SpaceOnlyRunReportsNoChange()
     {
         using var source = BuildZip((slideName, slide), slideRels);
-        using var first = DeterministicPackage.Convert(source);
+        using var first = await DeterministicPackage.ConvertAsync(source);
 
         using var second = DeterministicPackage.Convert(first, out var changes);
 
@@ -96,8 +97,8 @@ public class WhitespaceTests
         using var compactSource = BuildZip((slideName, slide), slideRels);
         using var prettifiedSource = BuildZip((slideName, prettified), slideRels);
 
-        using var fromCompact = DeterministicPackage.Convert(compactSource);
-        using var fromPrettified = DeterministicPackage.Convert(prettifiedSource);
+        using var fromCompact = await DeterministicPackage.ConvertAsync(compactSource);
+        using var fromPrettified = await DeterministicPackage.ConvertAsync(prettifiedSource);
 
         await Assert.That(ReadEntry(fromPrettified, slideName)).IsEqualTo(ReadEntry(fromCompact, slideName));
     }

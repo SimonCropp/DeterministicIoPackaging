@@ -63,7 +63,7 @@ public class Tests
         var file = Path.Combine(directory, "samples.numbering2_2.docx");
 
         using var first = Convert(file);
-        using var second = DeterministicPackage.Convert(first);
+        using var second = await DeterministicPackage.ConvertAsync(first);
 
         var bytes1 = first.ToArray();
         var bytes2 = second.ToArray();
