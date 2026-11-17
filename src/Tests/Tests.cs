@@ -63,12 +63,31 @@ public class Tests
         var file = Path.Combine(directory, "samples.numbering2_2.docx");
 
         using var first = Convert(file);
-        using var second = DeterministicPackage.Convert(first);
+        using var second = await DeterministicPackage.ConvertAsync(first);
 
         var bytes1 = first.ToArray();
         var bytes2 = second.ToArray();
 
         await Assert.That(bytes1).IsEquivalentTo(bytes2, CollectionOrdering.Matching);
+    }
+
+    // Convert and ConvertAsync must produce the same archive. They once differed in the compressed
+    // bytes of every rewritten XML part, because XDocument.Save and SaveAsync write to the deflater
+    // in different-sized chunks.
+    [Test]
+    [Arguments("sample.xlsx")]
+    [Arguments("sample.docx")]
+    [Arguments("sample.nupkg")]
+    [Arguments("samples.numbering2_2.docx")]
+    public async Task SyncAndAsyncBinaryEquality(string fileName)
+    {
+        var file = Path.Combine(directory, fileName);
+
+        using var sync = Convert(file);
+        using var sourceStream = File.OpenRead(file);
+        using var async = await DeterministicPackage.ConvertAsync(sourceStream);
+
+        await Assert.That(sync.ToArray()).IsEquivalentTo(async.ToArray(), CollectionOrdering.Matching);
     }
 
     [Test]

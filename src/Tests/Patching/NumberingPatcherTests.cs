@@ -103,7 +103,7 @@ public class NumberingPatcherTests
             Add(archive, "word/numbering.xml", numbering);
         }
 
-        using var result = DeterministicPackage.Convert(source);
+        using var result = await DeterministicPackage.ConvertAsync(source);
         using var resultArchive = new Archive(result, ZipArchiveMode.Read, leaveOpen: true);
 
         var relationshipId = Load(resultArchive, "word/_rels/numbering.xml.rels").Root!.Elements().Single().Attribute("Id")!.Value;
